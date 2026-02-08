@@ -363,7 +363,7 @@ check for the element schema.
 ```javascript
 // "elements": {"type": "string"}
 if (!Array.isArray(v)) {
-  e.push({instancePath: p, schemaPath: sp});
+  e.push({instancePath: p, schemaPath: sp + "/elements"});
 } else {
   for (let i = 0; i < v.length; i++) {
     if (typeof v[i] !== "string")
@@ -389,7 +389,7 @@ Emit an object type guard, then:
 ```javascript
 // Schema: {"properties":{"name":{"type":"string"}}, "optionalProperties":{"age":{"type":"uint8"}}}
 if (v === null || typeof v !== "object" || Array.isArray(v)) {
-  e.push({instancePath: p, schemaPath: sp});
+  e.push({instancePath: p, schemaPath: sp + "/properties"});
 } else {
   // Required properties
   if (!("name" in v)) e.push({instancePath: p, schemaPath: sp + "/properties/name"});
@@ -425,7 +425,7 @@ generated check for the value schema.
 ```javascript
 // "values": {"type": "string"}
 if (v === null || typeof v !== "object" || Array.isArray(v)) {
-  e.push({instancePath: p, schemaPath: sp});
+  e.push({instancePath: p, schemaPath: sp + "/values"});
 } else {
   for (const k in v) {
     if (typeof v[k] !== "string")
@@ -442,9 +442,9 @@ variant validator.
 ```javascript
 // "discriminator": "type", "mapping": {"a": {...}, "b": {...}}
 if (v === null || typeof v !== "object" || Array.isArray(v)) {
-  e.push({instancePath: p, schemaPath: sp});
+  e.push({instancePath: p, schemaPath: sp + "/discriminator"});
 } else if (!("type" in v)) {
-  e.push({instancePath: p, schemaPath: sp});
+  e.push({instancePath: p, schemaPath: sp + "/discriminator"});
 } else if (typeof v["type"] !== "string") {
   e.push({instancePath: p + "/type", schemaPath: sp + "/discriminator"});
 } else if (v["type"] === "a") {
@@ -553,16 +553,17 @@ code as string literals. Each emission rule appends to the schema path:
 |---|---|
 | Type | `/type` |
 | Enum | `/enum` |
-| Elements (type guard) | (nothing -- error at current path) |
+| Elements (type guard) | `/elements` |
 | Elements (child) | `/elements` |
+| Properties (type guard) | `/properties` (or `/optionalProperties` if no required properties) |
 | Properties (missing key) | `/properties/<key>` |
 | Properties (additional) | (nothing -- error at current path) |
 | Properties (child req) | `/properties/<key>` |
 | Properties (child opt) | `/optionalProperties/<key>` |
-| Values (type guard) | (nothing -- error at current path) |
+| Values (type guard) | `/values` |
 | Values (child) | `/values` |
-| Discrim (not object) | (nothing -- error at current path) |
-| Discrim (tag missing) | (nothing -- error at current path) |
+| Discrim (not object) | `/discriminator` |
+| Discrim (tag missing) | `/discriminator` |
 | Discrim (tag not string) | `/discriminator` |
 | Discrim (tag not in map) | `/mapping` |
 | Discrim (variant) | `/mapping/<tagValue>` |
@@ -642,7 +643,7 @@ Properties {
 export function validate(instance) {
   const e = [];
   if (instance === null || typeof instance !== "object" || Array.isArray(instance)) {
-    e.push({instancePath: "", schemaPath: ""});
+    e.push({instancePath: "", schemaPath: "/properties"});
     return e;
   }
 
@@ -659,7 +660,7 @@ export function validate(instance) {
 
   if (!("tags" in instance)) e.push({instancePath: "", schemaPath: "/properties/tags"});
   else if (!Array.isArray(instance["tags"]))
-    e.push({instancePath: "/tags", schemaPath: "/properties/tags"});
+    e.push({instancePath: "/tags", schemaPath: "/properties/tags/elements"});
   else {
     const arr = instance["tags"];
     for (let i = 0; i < arr.length; i++) {
