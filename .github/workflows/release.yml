@@ -187,26 +187,29 @@ jobs:
           VERSION="${{ needs.meta.outputs.version }}"
           
           if [[ "${{ needs.meta.outputs.prerelease }}" == "true" ]]; then
-            echo "body<<EOF" >> "$GITHUB_OUTPUT"
-            echo "## Nightly Build ${VERSION}" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "Automated nightly build." >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "### Binaries" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_aarch64-apple-darwin.tar.gz\\" - macOS (Apple Silicon)" >> "$GITHUB_OUTPUT"
-            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-pc-windows-msvc.zip\\" - Windows" >> "$GITHUB_OUTPUT"
-            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\\" - Linux (Debian Trixie)" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "### Installation" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo 'With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):' >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`bash' >> "$GITHUB_OUTPUT"
-            echo "mise use jtd-codegen@${VERSION}" >> "$GITHUB_OUTPUT"
-            echo '# or' >> "$GITHUB_OUTPUT"
-            echo "asdf install jtd-codegen ${VERSION}" >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            cat >> "$GITHUB_OUTPUT" <<'EOF'
+          body<<RELEASE_NOTES
+          ## Nightly Build
+          
+          Automated nightly build.
+          
+          ### Binaries
+          
+          - `jtd-codegen_VERSION_aarch64-apple-darwin.tar.gz` - macOS (Apple Silicon)
+          - `jtd-codegen_VERSION_x86_64-pc-windows-msvc.zip` - Windows  
+          - `jtd-codegen_VERSION_x86_64-unknown-linux-gnu.tar.gz` - Linux (Debian Trixie)
+          
+          ### Installation
+          
+          With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):
+          ```bash
+          mise use jtd-codegen@VERSION
+          # or
+          asdf install jtd-codegen VERSION
+          ```
+          RELEASE_NOTES
+          EOF
+            sed -i.bak "s/VERSION/${VERSION}/g" "$GITHUB_OUTPUT" && rm "$GITHUB_OUTPUT.bak"
           else
             # Get commits since last release
             LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
@@ -216,45 +219,58 @@ jobs:
               CHANGES=$(git log --oneline --no-decorate -20 2>/dev/null || echo "Initial release")
             fi
             
-            echo "body<<EOF" >> "$GITHUB_OUTPUT"
-            echo "## Release ${VERSION}" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "### Changes" >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
-            echo "$CHANGES" >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "### Binaries" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_aarch64-apple-darwin.tar.gz\\" - macOS (Apple Silicon)" >> "$GITHUB_OUTPUT"
-            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-pc-windows-msvc.zip\\" - Windows" >> "$GITHUB_OUTPUT"
-            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\\" - Linux (Debian Trixie)" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "### Installation" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo 'With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):' >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`bash' >> "$GITHUB_OUTPUT"
-            echo "mise use jtd-codegen@${VERSION}" >> "$GITHUB_OUTPUT"
-            echo '# or' >> "$GITHUB_OUTPUT"
-            echo "asdf install jtd-codegen ${VERSION}" >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "### Manual Download" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`bash' >> "$GITHUB_OUTPUT"
-            echo "# macOS" >> "$GITHUB_OUTPUT"
-            echo "curl -L -o jtd-codegen.tar.gz \\"https://github.com/${{ github.repository }}/releases/download/${{ needs.meta.outputs.tag }}/${{ env.BIN_NAME }}_${VERSION}_aarch64-apple-darwin.tar.gz\\"" >> "$GITHUB_OUTPUT"
-            echo "tar -xzf jtd-codegen.tar.gz" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "# Linux" >> "$GITHUB_OUTPUT"
-            echo "curl -L -o jtd-codegen.tar.gz \\"https://github.com/${{ github.repository }}/releases/download/${{ needs.meta.outputs.tag }}/${{ env.BIN_NAME }}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\\"" >> "$GITHUB_OUTPUT"
-            echo "tar -xzf jtd-codegen.tar.gz" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_OUTPUT"
-            echo "# Windows (PowerShell)" >> "$GITHUB_OUTPUT"
-            echo "Invoke-WebRequest -Uri \\"https://github.com/${{ github.repository }}/releases/download/${{ needs.meta.outputs.tag }}/${{ env.BIN_NAME }}_${VERSION}_x86_64-pc-windows-msvc.zip\\" -OutFile jtd-codegen.zip" >> "$GITHUB_OUTPUT"
-            echo "Expand-Archive -Path jtd-codegen.zip -DestinationPath ." >> "$GITHUB_OUTPUT"
-            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            {
+              cat <<'RELEASE_NOTES'
+          body<<EOF
+          ## Release VERSION
+          
+          ### Changes
+          ```
+          CHANGES_PLACEHOLDER
+          ```
+          
+          ### Binaries
+          
+          - `jtd-codegen_VERSION_aarch64-apple-darwin.tar.gz` - macOS (Apple Silicon)
+          - `jtd-codegen_VERSION_x86_64-pc-windows-msvc.zip` - Windows
+          - `jtd-codegen_VERSION_x86_64-unknown-linux-gnu.tar.gz` - Linux (Debian Trixie)
+          
+          ### Installation
+          
+          With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):
+          ```bash
+          mise use jtd-codegen@VERSION
+          # or
+          asdf install jtd-codegen VERSION
+          ```
+          
+          ### Manual Download
+          
+          ```bash
+          # macOS
+          curl -L -o jtd-codegen.tar.gz "https://github.com/REPO/releases/download/TAG/jtd-codegen_VERSION_aarch64-apple-darwin.tar.gz"
+          tar -xzf jtd-codegen.tar.gz
+          
+          # Linux
+          curl -L -o jtd-codegen.tar.gz "https://github.com/REPO/releases/download/TAG/jtd-codegen_VERSION_x86_64-unknown-linux-gnu.tar.gz"
+          tar -xzf jtd-codegen.tar.gz
+          
+          # Windows (PowerShell)
+          Invoke-WebRequest -Uri "https://github.com/REPO/releases/download/TAG/jtd-codegen_VERSION_x86_64-pc-windows-msvc.zip" -OutFile jtd-codegen.zip
+          Expand-Archive -Path jtd-codegen.zip -DestinationPath .
+          ```
+          EOF
+          RELEASE_NOTES
+            } >> "$GITHUB_OUTPUT"
+            
+            # Replace placeholders
+            ESCAPED_CHANGES=$(printf '%s\n' "$CHANGES" | sed 's/[&/\]/\\&/g')
+            sed -i.bak \
+              -e "s/VERSION/${VERSION}/g" \
+              -e "s|REPO|${{ github.repository }}|g" \
+              -e "s|TAG|${{ needs.meta.outputs.tag }}|g" \
+              -e "s/CHANGES_PLACEHOLDER/${ESCAPED_CHANGES}/" \
+              "$GITHUB_OUTPUT" && rm "$GITHUB_OUTPUT.bak"
           fi
 
       - name: Create release and upload assets

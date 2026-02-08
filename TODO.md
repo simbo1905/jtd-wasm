@@ -2,6 +2,9 @@
 
 ## Documentation
 - [ ] Tidy up README.md - remove the detailed "Crate structure" section that duplicates information and will become stale. Keep it focused on quick start, examples, and high-level concepts.
+- [ ] Review and fix formatting on GitHub release page (release/0.1.0)
+- [ ] Update CI release workflow to generate better formatted release notes
+- [ ] Manually fix existing release formatting with `gh release edit`
 
 ## Future Enhancements
 - [ ] Add performance benchmarks comparing JS vs WASM validation speed
