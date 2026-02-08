@@ -72,6 +72,44 @@ jtd-wasm/
 
 ## Quick start
 
+### Interactive demo
+
+Try the live validator playground:
+
+```bash
+xmake run demo
+```
+
+Then open http://localhost:8080/ in your browser.
+
+The demo includes:
+- Two example schemas (simple user, complex event with discriminators)
+- Real-time validation with detailed error reporting
+- Test case quick-load buttons
+- Live schema display
+
+See [examples/README.md](./examples/README.md) for details.
+
+**Available xmake targets:**
+
+```bash
+xmake show -l targets              # List all targets
+
+# Compatibility tests
+xmake run fetch_suite              # Download official test suite
+xmake run test_rust                # Run Rust validator tests (316 cases)
+xmake run test_js                  # Run JS validator tests (316 cases)
+xmake run test_wasm                # Run WASM validator tests (316 cases)
+xmake run test_all                 # Run all tests
+
+# Demo system
+xmake run demo_build               # Build jtd-codegen release binary
+xmake run demo_init                # Generate nginx.conf from template
+xmake run demo_compile             # Compile example validators
+xmake run demo_start               # Start nginx server
+xmake run demo                     # Run all demo steps
+```
+
 ### Generate a JavaScript validator
 
 ```rust

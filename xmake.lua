@@ -107,3 +107,168 @@ target("test_all")
         cprint("${green}OK:${clear} test_all")
     end)
 target_end()
+
+-- Demo targets
+
+target("demo_build")
+    set_kind("phony")
+    on_run(function ()
+        -- Build the release binary
+        cprint("${cyan}Building:${clear} cargo build --release")
+        os.vrunv("cargo", {"build", "--release"})
+        
+        local binary = path.join(os.projectdir(), "target", "release", "jtd-codegen")
+        if not os.isfile(binary) then
+            raise("Failed to build jtd-codegen binary at " .. binary)
+        end
+        
+        cprint("${green}Built:${clear} " .. binary)
+    end)
+target_end()
+
+target("demo_init")
+    set_kind("phony")
+    on_run(function ()
+        local projectdir = os.projectdir()
+        local template = path.join(projectdir, "examples", "nginx.conf.template")
+        local output = path.join(projectdir, "examples", "nginx.conf")
+        
+        if not os.isfile(template) then
+            raise("nginx.conf.template not found at " .. template)
+        end
+        
+        -- Detect nginx mime.types location
+        local mime_types = nil
+        local candidates = {
+            "/opt/homebrew/etc/nginx/mime.types",
+            "/usr/local/etc/nginx/mime.types",
+            "/etc/nginx/mime.types"
+        }
+        
+        for _, candidate in ipairs(candidates) do
+            if os.isfile(candidate) then
+                mime_types = candidate
+                break
+            end
+        end
+        
+        if not mime_types then
+            raise("Could not find nginx mime.types. Searched: " .. table.concat(candidates, ", "))
+        end
+        
+        -- Read template
+        local content = io.readfile(template)
+        
+        -- Replace placeholders
+        content = content:gsub("{{PROJECT_DIR}}", projectdir)
+        content = content:gsub("{{NGINX_MIME_TYPES}}", mime_types)
+        
+        -- Write output
+        io.writefile(output, content)
+        
+        cprint("${green}Generated:${clear} " .. output)
+        cprint("  ${dim}PROJECT_DIR=${clear}" .. projectdir)
+        cprint("  ${dim}NGINX_MIME_TYPES=${clear}" .. mime_types)
+    end)
+target_end()
+
+target("demo_compile")
+    set_kind("phony")
+    on_run(function ()
+        local projectdir = os.projectdir()
+        local binary = path.join(projectdir, "target", "release", "jtd-codegen")
+        
+        if not os.isfile(binary) then
+            raise("jtd-codegen binary not found. Run 'xmake run demo_build' first")
+        end
+        
+        local examples = path.join(projectdir, "examples")
+        
+        -- Find all numbered example directories
+        local dirs = os.dirs(path.join(examples, "*"))
+        table.sort(dirs)
+        
+        for _, dir in ipairs(dirs) do
+            local dirname = path.basename(dir)
+            if dirname:match("^%d+_") then
+                local schema = path.join(dir, "schema.json")
+                local validator = path.join(dir, "validator.js")
+                
+                if os.isfile(schema) then
+                    cprint("${cyan}Compiling:${clear} " .. dirname)
+                    local output = os.iorunv(binary, {"--target", "js", schema})
+                    io.writefile(validator, output)
+                    cprint("  ${green}→${clear} " .. path.relative(validator, projectdir))
+                else
+                    cprint("${yellow}Warning:${clear} " .. dirname .. " has no schema.json, skipping")
+                end
+            end
+        end
+        
+        cprint("${green}Compiled all example validators${clear}")
+    end)
+target_end()
+
+target("demo_start")
+    set_kind("phony")
+    on_run(function ()
+        local projectdir = os.projectdir()
+        local nginx_conf = path.join(projectdir, "examples", "nginx.conf")
+        
+        if not os.isfile(nginx_conf) then
+            raise("nginx.conf not found. Run 'xmake run demo_init' first")
+        end
+        
+        -- Check if nginx is available
+        local nginx_path = nil
+        local try_paths = {
+            "/opt/homebrew/bin/nginx",
+            "/usr/local/bin/nginx",
+            "/usr/bin/nginx"
+        }
+        
+        for _, p in ipairs(try_paths) do
+            if os.isfile(p) then
+                nginx_path = p
+                break
+            end
+        end
+        
+        if not nginx_path then
+            -- Try PATH
+            local result = os.iorun("which nginx")
+            if result and result:trim() ~= "" then
+                nginx_path = result:trim()
+            end
+        end
+        
+        if not nginx_path then
+            raise("nginx not found. Install with: brew install nginx")
+        end
+        
+        cprint("${cyan}Starting nginx:${clear} " .. nginx_path)
+        cprint("  ${dim}Config:${clear} " .. nginx_conf)
+        cprint("  ${dim}URL:${clear} http://localhost:8080/")
+        cprint("")
+        cprint("${yellow}Press Ctrl+C to stop${clear}")
+        
+        os.execv(nginx_path, {"-c", nginx_conf})
+    end)
+target_end()
+
+target("demo")
+    set_kind("phony")
+    on_run(function ()
+        cprint("${cyan}Running:${clear} demo_build")
+        os.vrunv("xmake", {"run", "demo_build"})
+        
+        cprint("${cyan}Running:${clear} demo_init")
+        os.vrunv("xmake", {"run", "demo_init"})
+        
+        cprint("${cyan}Running:${clear} demo_compile")
+        os.vrunv("xmake", {"run", "demo_compile"})
+        
+        cprint("${cyan}Running:${clear} demo_start")
+        os.vrunv("xmake", {"run", "demo_start"})
+    end)
+target_end()

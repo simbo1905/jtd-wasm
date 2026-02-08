@@ -28,5 +28,11 @@ Thumbs.db
 /tmp/
 .tmp/
 
+# Demo artifacts
+/target/release/jtd-codegen
+/examples/nginx.conf
+/examples/nginx.pid
+/examples/*/validator.js
+
 # Session dumps (development)
 session-*.md
