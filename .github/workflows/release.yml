@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  schedule:
+    # Daily at 03:15 UTC
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+  push:
+    tags:
+      - 'releases/*'
+
+permissions:
+  contents: write
+
+env:
+  BIN_NAME: jtd-codegen
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            if [[ ! "$TAG" =~ ^releases/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Unexpected tag format: $TAG" >&2
+              exit 1
+            fi
+            VERSION="${TAG#releases/}"
+            PRERELEASE=false
+          else
+            DATE="$(date -u +%Y%m%d)"
+            TAG="nightly-${DATE}"
+            VERSION="$TAG"
+            PRERELEASE=true
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+  build_macos:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: meta
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -p jtd-codegen --bin jtd-codegen --release --locked
+          mkdir -p dist
+          cp "target/release/jtd-codegen" "dist/jtd-codegen"
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="aarch64-apple-darwin"
+          out="${{ env.BIN_NAME }}_${{ needs.meta.outputs.version }}_${target}.tar.gz"
+          tar -C dist -czf "$out" "${{ env.BIN_NAME }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: '*.tar.gz'
+          if-no-files-found: error
+
+  build_windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: meta
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -p jtd-codegen --bin jtd-codegen --release --locked
+          mkdir -p dist
+          cp "target/release/jtd-codegen.exe" "dist/jtd-codegen.exe"
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $target = 'x86_64-pc-windows-msvc'
+          $out = "${{ env.BIN_NAME }}_${{ needs.meta.outputs.version }}_${target}.zip"
+          Compress-Archive -Path dist\jtd-codegen.exe -DestinationPath $out -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: '*.zip'
+          if-no-files-found: error
+
+  build_linux_debian_trixie:
+    name: Build Linux (Debian Trixie)
+    runs-on: ubuntu-latest
+    needs: meta
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build in Debian Trixie container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/work" \
+            -w /work \
+            debian:trixie-slim \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                ca-certificates curl build-essential pkg-config git python3
+              curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
+              . "$HOME/.cargo/env"
+              cargo build -p jtd-codegen --bin jtd-codegen --release --locked
+              mkdir -p dist
+              cp "target/release/jtd-codegen" "dist/jtd-codegen"
+            '
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="x86_64-unknown-linux-gnu"
+          out="${{ env.BIN_NAME }}_${{ needs.meta.outputs.version }}_${target}.tar.gz"
+          tar -C dist -czf "$out" "${{ env.BIN_NAME }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: '*.tar.gz'
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - meta
+      - build_macos
+      - build_windows
+      - build_linux_debian_trixie
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+
+      - name: Flatten artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find dist-artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
+          ls -la dist
+
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: ${{ needs.meta.outputs.tag }}
+          prerelease: ${{ needs.meta.outputs.prerelease }}
+          files: |
+            dist/*.tar.gz
+            dist/*.zip

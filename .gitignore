@@ -1,0 +1,33 @@
+# Rust / Cargo
+/target
+**/*.rs.bk
+Cargo.lock
+
+# WASM build artifacts
+/pkg
+/wasm-pkg
+
+# Node
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# xmake
+.xmake/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+/tmp/
+.tmp/
+
+# Session dumps (development)
+session-*.md
