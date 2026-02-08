@@ -25,14 +25,15 @@ target("fetch_suite")
         os.vrunv("curl", {"-f", "-s", "-S", "-L", base .. "invalid_schemas.json", "-o", invalid})
 
         local function sha256(filepath)
-            local script = "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())"
-            local ok, out = pcall(function ()
-                return os.iorunv("python3", {"-c", script, filepath})
-            end)
-            if not ok then
-                out = os.iorunv("python", {"-c", script, filepath})
+            if os.host() == "windows" then
+                -- certutil outputs: "SHA256 hash of file:\n<hex>\nCertUtil: ..."
+                local out = os.iorunv("certutil", {"-hashfile", filepath, "SHA256"})
+                return out:match("\n(%w+)\n")
+            else
+                -- shasum works on macOS and Linux
+                local out = os.iorunv("shasum", {"-a", "256", filepath})
+                return out:match("^(%w+)")
             end
-            return out:match("^(%w+)")
         end
 
         local vhash = sha256(validation)
