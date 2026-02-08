@@ -192,20 +192,73 @@ target("demo_compile")
             local dirname = path.basename(dir)
             if dirname:match("^%d+_") then
                 local schema = path.join(dir, "schema.json")
-                local validator = path.join(dir, "validator.js")
+                local validator_js = path.join(dir, "validator.js")
                 
                 if os.isfile(schema) then
-                    cprint("${cyan}Compiling:${clear} " .. dirname)
+                    cprint("${cyan}Compiling JS:${clear} " .. dirname)
                     local output = os.iorunv(binary, {"--target", "js", schema})
-                    io.writefile(validator, output)
-                    cprint("  ${green}→${clear} " .. path.relative(validator, projectdir))
+                    io.writefile(validator_js, output)
+                    cprint("  ${green}→${clear} " .. path.relative(validator_js, projectdir))
                 else
                     cprint("${yellow}Warning:${clear} " .. dirname .. " has no schema.json, skipping")
                 end
             end
         end
         
-        cprint("${green}Compiled all example validators${clear}")
+        cprint("${green}Compiled all JS validators${clear}")
+    end)
+target_end()
+
+target("demo_compile_wasm")
+    set_kind("phony")
+    on_run(function ()
+        local projectdir = os.projectdir()
+        local binary = path.join(projectdir, "target", "release", "jtd-codegen")
+        
+        if not os.isfile(binary) then
+            raise("jtd-codegen binary not found. Run 'xmake run demo_build' first")
+        end
+        
+        -- Check for wasm-pack
+        local wasm_pack = nil
+        local result = os.iorun("which wasm-pack")
+        if result and result:trim() ~= "" then
+            wasm_pack = result:trim()
+        end
+        
+        if not wasm_pack then
+            raise("wasm-pack not found. Install with: cargo install wasm-pack")
+        end
+        
+        local examples = path.join(projectdir, "examples")
+        local dirs = os.dirs(path.join(examples, "*"))
+        table.sort(dirs)
+        
+        for _, dir in ipairs(dirs) do
+            local dirname = path.basename(dir)
+            if dirname:match("^%d+_") then
+                local schema = path.join(dir, "schema.json")
+                local wasm_dir = path.join(dir, "wasm")
+                local wasm_src = path.join(wasm_dir, "src")
+                
+                if os.isfile(schema) and os.isdir(wasm_dir) then
+                    cprint("${cyan}Compiling Rust:${clear} " .. dirname)
+                    
+                    -- Generate Rust validator
+                    local rust_output = os.iorunv(binary, {"--target", "rust", schema})
+                    local validator_rs = path.join(wasm_src, "validator.rs")
+                    io.writefile(validator_rs, rust_output)
+                    cprint("  ${green}→${clear} " .. path.relative(validator_rs, projectdir))
+                    
+                    -- Build WASM with wasm-pack
+                    cprint("${cyan}Building WASM:${clear} " .. dirname)
+                    os.vrunv(wasm_pack, {"build", "--target", "web", "--out-dir", path.join("..", "pkg"), wasm_dir})
+                    cprint("  ${green}→${clear} " .. path.relative(path.join(dir, "pkg"), projectdir))
+                end
+            end
+        end
+        
+        cprint("${green}Compiled all WASM validators${clear}")
     end)
 target_end()
 
@@ -267,6 +320,9 @@ target("demo")
         
         cprint("${cyan}Running:${clear} demo_compile")
         os.vrunv("xmake", {"run", "demo_compile"})
+        
+        cprint("${cyan}Running:${clear} demo_compile_wasm")
+        os.vrunv("xmake", {"run", "demo_compile_wasm"})
         
         cprint("${cyan}Running:${clear} demo_start")
         os.vrunv("xmake", {"run", "demo_start"})

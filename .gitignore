@@ -33,6 +33,10 @@ Thumbs.db
 /examples/nginx.conf
 /examples/nginx.pid
 /examples/*/validator.js
+/examples/*/wasm/src/validator.rs
+/examples/*/wasm/target/
+/examples/*/wasm/Cargo.lock
+/examples/*/pkg/
 
 # Session dumps (development)
 session-*.md
