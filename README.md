@@ -14,23 +14,18 @@ Two emit targets:
 The Rust target exists because JavaScript has a performance ceiling.
 A JTD schema compiled to Rust, then compiled to WASM via `wasm-pack`,
 produces a compact binary that validates JSON in the browser at native
-speed.  The path is:
+speed.
 
-```
-JTD schema (JSON)
-      │
-      ▼
- jtd-codegen (Rust)     ← this crate, runs at build time
-      │
-      ├──► JavaScript ESM2020 module     (emit_js)
-      │
-      └──► Rust source file              (emit_rs)
-                 │
-                 ▼
-            cargo / wasm-pack            ← standard Rust toolchain
-                 │
-                 ▼
-            .wasm binary                 ← runs in browser, fast + compact
+```mermaid
+flowchart TD
+    A["JTD schema (JSON)"] --> B["jtd-codegen (Rust)"]
+    B --> |emit_js| C["JavaScript ESM2020 module"]
+    B --> |emit_rs| D["Rust source file"]
+    D --> E["cargo / wasm-pack"]
+    E --> F[".wasm binary"]
+    
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style F fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
 There is no interpreter anywhere in this pipeline.  The generated code

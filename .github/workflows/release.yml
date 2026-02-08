@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
   push:
     tags:
+      - 'release/[0-9]+.[0-9]+.[0-9]+'
       - 'releases/*'
 
 permissions:
@@ -29,12 +30,17 @@ jobs:
           set -euo pipefail
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             TAG="${GITHUB_REF_NAME}"
-            if [[ ! "$TAG" =~ ^releases/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # Handle both release/x.y.z and releases/x.y.z
+            if [[ "$TAG" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION="${TAG#release/}"
+              PRERELEASE=false
+            elif [[ "$TAG" =~ ^releases/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION="${TAG#releases/}"
+              PRERELEASE=false
+            else
               echo "Unexpected tag format: $TAG" >&2
               exit 1
             fi
-            VERSION="${TAG#releases/}"
-            PRERELEASE=false
           else
             DATE="$(date -u +%Y%m%d)"
             TAG="nightly-${DATE}"
@@ -157,6 +163,10 @@ jobs:
       - build_windows
       - build_linux_debian_trixie
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: dist-artifacts
@@ -169,12 +179,92 @@ jobs:
           find dist-artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
           ls -la dist
 
+      - name: Generate release notes
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.meta.outputs.version }}"
+          
+          if [[ "${{ needs.meta.outputs.prerelease }}" == "true" ]]; then
+            echo "body<<EOF" >> "$GITHUB_OUTPUT"
+            echo "## Nightly Build ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "Automated nightly build." >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Binaries" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_aarch64-apple-darwin.tar.gz\\" - macOS (Apple Silicon)" >> "$GITHUB_OUTPUT"
+            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-pc-windows-msvc.zip\\" - Windows" >> "$GITHUB_OUTPUT"
+            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\\" - Linux (Debian Trixie)" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Installation" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo 'With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):' >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`bash' >> "$GITHUB_OUTPUT"
+            echo "mise use jtd-codegen@${VERSION}" >> "$GITHUB_OUTPUT"
+            echo '# or' >> "$GITHUB_OUTPUT"
+            echo "asdf install jtd-codegen ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            # Get commits since last release
+            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [[ -n "$LAST_TAG" ]]; then
+              CHANGES=$(git log "${LAST_TAG}..HEAD" --oneline --no-decorate 2>/dev/null || echo "No changes")
+            else
+              CHANGES=$(git log --oneline --no-decorate -20 2>/dev/null || echo "Initial release")
+            fi
+            
+            echo "body<<EOF" >> "$GITHUB_OUTPUT"
+            echo "## Release ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Changes" >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
+            echo "$CHANGES" >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Binaries" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_aarch64-apple-darwin.tar.gz\\" - macOS (Apple Silicon)" >> "$GITHUB_OUTPUT"
+            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-pc-windows-msvc.zip\\" - Windows" >> "$GITHUB_OUTPUT"
+            echo "- \\"${{ env.BIN_NAME }}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\\" - Linux (Debian Trixie)" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Installation" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo 'With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):' >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`bash' >> "$GITHUB_OUTPUT"
+            echo "mise use jtd-codegen@${VERSION}" >> "$GITHUB_OUTPUT"
+            echo '# or' >> "$GITHUB_OUTPUT"
+            echo "asdf install jtd-codegen ${VERSION}" >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Manual Download" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`bash' >> "$GITHUB_OUTPUT"
+            echo "# macOS" >> "$GITHUB_OUTPUT"
+            echo "curl -L -o jtd-codegen.tar.gz \\"https://github.com/${{ github.repository }}/releases/download/${{ needs.meta.outputs.tag }}/${{ env.BIN_NAME }}_${VERSION}_aarch64-apple-darwin.tar.gz\\"" >> "$GITHUB_OUTPUT"
+            echo "tar -xzf jtd-codegen.tar.gz" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "# Linux" >> "$GITHUB_OUTPUT"
+            echo "curl -L -o jtd-codegen.tar.gz \\"https://github.com/${{ github.repository }}/releases/download/${{ needs.meta.outputs.tag }}/${{ env.BIN_NAME }}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\\"" >> "$GITHUB_OUTPUT"
+            echo "tar -xzf jtd-codegen.tar.gz" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "# Windows (PowerShell)" >> "$GITHUB_OUTPUT"
+            echo "Invoke-WebRequest -Uri \\"https://github.com/${{ github.repository }}/releases/download/${{ needs.meta.outputs.tag }}/${{ env.BIN_NAME }}_${VERSION}_x86_64-pc-windows-msvc.zip\\" -OutFile jtd-codegen.zip" >> "$GITHUB_OUTPUT"
+            echo "Expand-Archive -Path jtd-codegen.zip -DestinationPath ." >> "$GITHUB_OUTPUT"
+            echo '\\`\\`\\`' >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.meta.outputs.tag }}
           name: ${{ needs.meta.outputs.tag }}
           prerelease: ${{ needs.meta.outputs.prerelease }}
+          body: ${{ steps.notes.outputs.body }}
+          generate_release_notes: false
           files: |
             dist/*.tar.gz
             dist/*.zip
