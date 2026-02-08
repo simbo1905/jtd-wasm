@@ -5,6 +5,8 @@
 - [x] Review and fix formatting on GitHub release page (release/0.1.0)
 - [x] Update CI release workflow to generate better formatted release notes
 - [x] Manually fix existing release formatting with `gh release edit`
+- [x] Update demo header to signpost RFC 8927 and repo link
+- [x] Add allow(non_snake_case) and deny(warnings) handling for WASM validators
 
 ## Future Enhancements
 - [ ] Add performance benchmarks comparing JS vs WASM validation speed

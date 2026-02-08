@@ -92,10 +92,11 @@ fn emit_timestamp_helper(w: &mut CodeWriter) {
 }
 
 /// Helper: generate a push_error statement.
-/// `err` is the error vec expression, `ip_expr` builds the instancePath,
-/// `sp_expr` builds the schemaPath.
+/// `err` is the error vec expression (may include `&mut ` prefix),
+/// `ip_expr` builds the instancePath, `sp_expr` builds the schemaPath.
 fn push_err(err: &str, ip_expr: &str, sp_expr: &str) -> String {
-    format!("{err}.push(({ip_expr}, {sp_expr}));")
+    let vec_name = err.strip_prefix("&mut ").unwrap_or(err);
+    format!("{vec_name}.push(({ip_expr}, {sp_expr}));")
 }
 
 /// `ip` and `sp` are always Rust variable names of type `&str`.

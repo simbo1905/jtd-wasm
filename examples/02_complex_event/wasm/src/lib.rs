@@ -1,3 +1,6 @@
+#![deny(warnings)]
+#![allow(non_snake_case)]
+#![allow(dead_code)]
 use wasm_bindgen::prelude::*;
 
 // Generated validator will be injected here
