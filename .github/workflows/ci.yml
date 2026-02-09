@@ -43,9 +43,9 @@ jobs:
       - name: Build and Test (Windows)
         if: runner.os == 'Windows'
         # Windows quickjs-rs build is broken, so we skip test_js.
-        # But we MUST verify the Rust->Rust and Rust->WASM workflows.
+        # We also skip 'check' (clippy) because it compiles dev-dependencies (quickjs) for tests.
+        # Core compilation and Rust/WASM behavior are verified by test_rust/test_wasm.
         run: |
-          xmake run check
           xmake run demo_build
           xmake run test_rust
           xmake run test_wasm
