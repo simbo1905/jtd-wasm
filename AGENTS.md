@@ -20,6 +20,7 @@ We validate against the official [json-typedef-spec](https://github.com/jsontype
 - **Rust (Native)**: Tested on all platforms (macOS, Linux, Windows).
 - **WebAssembly (WASI)**: Tested on all platforms via `wasmtime`.
 - **JavaScript (ESM)**: Tested on macOS/Linux via `quickjs-rs`.
+- **Lua (5.1/LuaJIT)**: Tested on all platforms via `mlua` + `dkjson`.
 
 ### 3. Windows Testing Strategy
 We strictly enforce **Rust → Rust** and **Rust → WASM** correctness on Windows. However, we **skip JavaScript validation tests on Windows** (`test_js` target).
@@ -41,6 +42,7 @@ xmake run test_all
 # Specific targets
 xmake run test_rust
 xmake run test_js   # Skips on Windows
+xmake run test_lua
 xmake run test_wasm
 ```
 

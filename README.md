@@ -28,6 +28,7 @@ flowchart TD
 - **Zero Runtime Overhead**: Generates efficient code that performs validation directly. No schema parsing or interpretation at runtime.
 - **Multi-Target**:
   - **JavaScript**: Generates standalone ESM `.mjs` files. No dependencies.
+  - **Lua**: Generates portable Lua 5.1 / LuaJIT code.
   - **Rust**: Generates struct-free, dependency-light code (only `serde_json`).
   - **WebAssembly**: Combine Rust output with `wasm-pack` for native-speed browser validation.
 - **Standard Compliant**: Verified against the [official JSON Type Definition compliance suite](https://github.com/jsontypedef/json-typedef-spec) (316 tests).
@@ -52,6 +53,9 @@ Generate a validator from a schema file:
 # Generate JavaScript
 jtd-codegen --target js schema.json > validator.js
 
+# Generate Lua
+jtd-codegen --target lua schema.json > validator.lua
+
 # Generate Rust
 jtd-codegen --target rust schema.json > validator.rs
 ```
@@ -63,6 +67,7 @@ jtd-codegen --target rust schema.json > validator.rs
 | **Rust → Rust** | Schema → `.rs` | Rust backend services needing high-performance validation. |
 | **Rust → WASM** | Schema → `.rs` → `.wasm` | Browser apps needing native speed & type safety. |
 | **Rust → JavaScript** | Schema → `.mjs` | Node.js/Browser apps where a standalone, readable JS module is preferred. |
+| **Rust → Lua** | Schema → `.lua` | Embedded systems (Nginx, Redis, Games) using Lua 5.1 or LuaJIT. |
 
 ### Code Examples
 
@@ -92,6 +97,21 @@ fn main() {
         println!("Validation failed: {:?}", errors);
     }
 }
+```
+
+**Lua (5.1 / LuaJIT)**
+```lua
+local validate = require("validator").validate
+
+-- Assuming you have a JSON decoder (e.g., dkjson, cjson)
+local data = { name = "Alice", age = 30 }
+local errors = validate(data)
+
+if #errors > 0 then
+  for _, err in ipairs(errors) do
+    print("Error at " .. err[1] .. ": " .. err[2])
+  end
+end
 ```
 
 ## 🧪 Development & Testing

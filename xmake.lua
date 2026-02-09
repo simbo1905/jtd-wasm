@@ -46,12 +46,16 @@ target("fetch_suite")
         local dir = path.join(os.projectdir(), ".tmp", "json-typedef-spec", JSON_TYPEDEF_SPEC_COMMIT, "tests")
         local validation = path.join(dir, "validation.json")
         local invalid = path.join(dir, "invalid_schemas.json")
+        local dkjson = path.join(os.projectdir(), ".tmp", "dkjson.lua")
 
         os.mkdir(dir)
 
         local base = "https://raw.githubusercontent.com/jsontypedef/json-typedef-spec/" .. JSON_TYPEDEF_SPEC_COMMIT .. "/tests/"
         os.vrunv("curl", {"-f", "-s", "-S", "-L", base .. "validation.json", "-o", validation})
         os.vrunv("curl", {"-f", "-s", "-S", "-L", base .. "invalid_schemas.json", "-o", invalid})
+        
+        -- Fetch dkjson.lua for Lua testing
+        os.vrunv("curl", {"-f", "-s", "-S", "-L", "https://raw.githubusercontent.com/LuaDist/dkjson/master/dkjson.lua", "-o", dkjson})
 
         local function sha256(filepath)
             if os.host() == "windows" then
@@ -111,6 +115,21 @@ target("test_js")
     end)
 target_end()
 
+target("test_lua")
+    set_kind("phony")
+    on_run(function ()
+        cprint("${cyan}Running:${clear} fetch_suite")
+        os.vrunv("xmake", {"run", "fetch_suite"})
+        local validation = path.join(os.projectdir(), ".tmp", "json-typedef-spec", JSON_TYPEDEF_SPEC_COMMIT, "tests", "validation.json")
+        local dkjson = path.join(os.projectdir(), ".tmp", "dkjson.lua")
+        os.setenv("JTD_VALIDATION_JSON", validation)
+        os.setenv("JTD_DKJSON_PATH", dkjson)
+        cprint("${cyan}Running:${clear} cargo test -p jtd-codegen --test lua_validation_suite -- --nocapture")
+        os.vrunv("cargo", {"test", "-p", "jtd-codegen", "--test", "lua_validation_suite", "--", "--nocapture"})
+        cprint("${green}OK:${clear} test_lua")
+    end)
+target_end()
+
 target("test_wasm")
     set_kind("phony")
     on_run(function ()
@@ -143,6 +162,11 @@ target("test_all")
         else
             cprint("${yellow}Skipping:${clear} quickjs_validation_suite on Windows")
         end
+
+        cprint("${cyan}Running:${clear} cargo test -p jtd-codegen --test lua_validation_suite -- --nocapture")
+        local dkjson = path.join(os.projectdir(), ".tmp", "dkjson.lua")
+        os.setenv("JTD_DKJSON_PATH", dkjson)
+        os.vrunv("cargo", {"test", "-p", "jtd-codegen", "--test", "lua_validation_suite", "--", "--nocapture"})
 
         cprint("${cyan}Running:${clear} xmake run test_wasm")
         os.vrunv("xmake", {"run", "test_wasm"})

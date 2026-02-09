@@ -2,6 +2,7 @@
 ///
 /// Usage:
 ///   jtd-codegen --target js   < schema.json > validator.mjs
+///   jtd-codegen --target lua  < schema.json > validator.lua
 ///   jtd-codegen --target rust < schema.json > validator.rs
 ///   jtd-codegen --target rust schema.json   > validator.rs
 use std::io::Read;
@@ -20,16 +21,17 @@ fn main() {
                 if i < args.len() {
                     target = match args[i].as_str() {
                         "js" | "javascript" => "js",
+                        "lua" => "lua",
                         "rust" | "rs" => "rust",
                         other => {
-                            eprintln!("Unknown target: {other}. Use 'js' or 'rust'.");
+                            eprintln!("Unknown target: {other}. Use 'js', 'lua', or 'rust'.");
                             std::process::exit(1);
                         }
                     };
                 }
             }
             "--help" | "-h" => {
-                eprintln!("Usage: jtd-codegen [--target js|rust] [schema.json]");
+                eprintln!("Usage: jtd-codegen [--target js|lua|rust] [schema.json]");
                 eprintln!("  Reads JTD schema from file or stdin, emits code to stdout.");
                 std::process::exit(0);
             }
@@ -69,6 +71,7 @@ fn main() {
 
     let code = match target {
         "js" => jtd_codegen::emit_js::emit(&compiled),
+        "lua" => jtd_codegen::emit_lua::emit(&compiled),
         "rust" => jtd_codegen::emit_rs::emit(&compiled),
         _ => unreachable!(),
     };
