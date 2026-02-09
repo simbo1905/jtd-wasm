@@ -96,6 +96,11 @@ target_end()
 target("test_js")
     set_kind("phony")
     on_run(function ()
+        if os.host() == "windows" then
+            cprint("${yellow}Skipping:${clear} test_js on Windows (quickjs-rs not supported)")
+            return
+        end
+
         cprint("${cyan}Running:${clear} fetch_suite")
         os.vrunv("xmake", {"run", "fetch_suite"})
         local validation = path.join(os.projectdir(), ".tmp", "json-typedef-spec", JSON_TYPEDEF_SPEC_COMMIT, "tests", "validation.json")
@@ -131,8 +136,14 @@ target("test_all")
         os.setenv("JTD_VALIDATION_JSON", validation)
         cprint("${cyan}Running:${clear} cargo test -p jtd-codegen --test rs_validation_suite -- --nocapture")
         os.vrunv("cargo", {"test", "-p", "jtd-codegen", "--test", "rs_validation_suite", "--", "--nocapture"})
-        cprint("${cyan}Running:${clear} cargo test -p jtd-codegen --test quickjs_validation_suite -- --nocapture")
-        os.vrunv("cargo", {"test", "-p", "jtd-codegen", "--test", "quickjs_validation_suite", "--", "--nocapture"})
+        
+        if os.host() ~= "windows" then
+            cprint("${cyan}Running:${clear} cargo test -p jtd-codegen --test quickjs_validation_suite -- --nocapture")
+            os.vrunv("cargo", {"test", "-p", "jtd-codegen", "--test", "quickjs_validation_suite", "--", "--nocapture"})
+        else
+            cprint("${yellow}Skipping:${clear} quickjs_validation_suite on Windows")
+        end
+
         cprint("${cyan}Running:${clear} xmake run test_wasm")
         os.vrunv("xmake", {"run", "test_wasm"})
         cprint("${green}OK:${clear} test_all")

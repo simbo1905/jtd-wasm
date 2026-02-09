@@ -1,3 +1,4 @@
+#![cfg(not(windows))]
 /// Integration test: generates JavaScript from each test case in the official
 /// JTD validation suite and evaluates it with embedded QuickJS (no node/bun).
 use quickjs_rs::Context;
