@@ -4,12 +4,13 @@ Ahead-of-time code generator that compiles [RFC 8927 JSON Type Definition](https
 schemas into optimised validation functions -- no interpreter, no AST at
 runtime, no dead code.
 
-Two emit targets:
+## Supported Scenarios
 
-| Target | Output | Use case |
-|--------|--------|----------|
-| **JavaScript ESM2020** | Standalone `.mjs` module | Browser bundles where JS is fast enough |
-| **Rust → WASM** | `.rs` source → `wasm-pack` → `.wasm` | Browser validation where speed and size matter |
+| Scenario | Workflow | Use Case |
+|----------|----------|----------|
+| **Rust → Rust** | Schema → `.rs` source | Rust backend services needing high-performance validation |
+| **Rust → WASM** | Schema → `.rs` → `wasm-pack` → `.wasm` | Browser apps needing native validation speed & type safety |
+| **Rust → JavaScript** | Schema → `.mjs` module | Node.js/Browser apps where a standalone JS module is preferred |
 
 The Rust target exists because JavaScript has a performance ceiling.
 A JTD schema compiled to Rust, then compiled to WASM via `wasm-pack`,
@@ -40,32 +41,6 @@ code examples, and the Section 8 worked example.  The corrections were
 validated against the authoritative
 [`json-typedef-spec/tests/validation.json`](https://github.com/jsontypedef/json-typedef-spec)
 test suite (316 test cases, all passing for both emitters).
-
-## Crate structure
-
-```
-jtd-wasm/
-├── jtd-codegen/                  # Core library
-│   ├── src/
-│   │   ├── ast.rs                # Immutable AST node types (Section 3)
-│   │   ├── compiler.rs           # Schema → AST compiler (Section 3.2-3.3)
-│   │   ├── emit_js/              # JavaScript ESM2020 emitter (Section 5)
-│   │   │   ├── writer.rs         # Indented code builder
-│   │   │   ├── types.rs          # TypeKeyword → JS condition strings
-│   │   │   ├── context.rs        # Path tracking (instancePath, schemaPath)
-│   │   │   ├── nodes.rs          # Per-node emit functions, independently tested
-│   │   │   └── emit.rs           # AST walk + composition into full ES module
-│   │   └── emit_rs/              # Rust emitter (Section 5, Rust syntax)
-│   │       ├── types.rs          # TypeKeyword → Rust condition strings
-│   │       ├── context.rs        # Path tracking
-│   │       └── emit.rs           # AST walk + composition into full Rust module
-│   └── tests/
-│       ├── quickjs_validation_suite.rs  # 316 tests: emit JS, run via embedded QuickJS
-│       └── rs_validation_suite.rs       # 316 tests: emit Rust, compile, run
-└── jtd-wasm-validator/           # Example: emitted Rust compiled to WASM
-
-└── xmake.lua                      # Compatibility suite orchestration (downloads into .tmp/)
-```
 
 ## Quick start
 
