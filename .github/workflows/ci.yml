@@ -40,7 +40,12 @@ jobs:
         if: runner.os != 'Windows'
         run: xmake run test_all
 
-      - name: Build only (Windows)
+      - name: Build and Test (Windows)
         if: runner.os == 'Windows'
-        # Windows quickjs-rs build is broken, so we only verify core compilation
-        run: xmake run check && xmake run demo_build
+        # Windows quickjs-rs build is broken, so we skip test_js.
+        # But we MUST verify the Rust->Rust and Rust->WASM workflows.
+        run: |
+          xmake run check
+          xmake run demo_build
+          xmake run test_rust
+          xmake run test_wasm
