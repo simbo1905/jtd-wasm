@@ -1,21 +1,18 @@
 # jtd-wasm
 
-Ahead-of-time code generator that compiles [RFC 8927 JSON Type Definition](https://www.rfc-editor.org/rfc/rfc8927)
-schemas into optimised validation functions -- no interpreter, no AST at
-runtime, no dead code.
+[![CI](https://github.com/simbo1905/jtd-wasm/actions/workflows/ci.yml/badge.svg)](https://github.com/simbo1905/jtd-wasm/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/simbo1905/jtd-wasm)](https://github.com/simbo1905/jtd-wasm/releases)
+[![License](https://img.shields.io/github/license/simbo1905/jtd-wasm)](LICENSE)
 
-## Supported Scenarios
+**Ahead-of-time code generator for [RFC 8927 JSON Type Definition](https://www.rfc-editor.org/rfc/rfc8927).**
 
-| Scenario | Workflow | Use Case |
-|----------|----------|----------|
-| **Rust → Rust** | Schema → `.rs` source | Rust backend services needing high-performance validation |
-| **Rust → WASM** | Schema → `.rs` → `wasm-pack` → `.wasm` | Browser apps needing native validation speed & type safety |
-| **Rust → JavaScript** | Schema → `.mjs` module | Node.js/Browser apps where a standalone JS module is preferred |
+Compiles JTD schemas into optimized validation functions for Rust and JavaScript. No interpreter, no AST at runtime, zero overhead.
 
-The Rust target exists because JavaScript has a performance ceiling.
-A JTD schema compiled to Rust, then compiled to WASM via `wasm-pack`,
-produces a compact binary that validates JSON in the browser at native
-speed.
+## 🚀 Interactive Demo
+
+**[Try the Live Playground](https://simbo1905.github.io/jtd-wasm/)**
+
+Test schemas against the generated validators (JS and WASM) directly in your browser.
 
 ```mermaid
 flowchart TD
@@ -26,166 +23,96 @@ flowchart TD
     E --> F[".wasm binary"]
 ```
 
-There is no interpreter anywhere in this pipeline.  The generated code
-contains exactly the checks the schema requires and nothing else.
+## ✨ Features
 
-## Specification
+- **Zero Runtime Overhead**: Generates efficient code that performs validation directly. No schema parsing or interpretation at runtime.
+- **Multi-Target**:
+  - **JavaScript**: Generates standalone ESM `.mjs` files. No dependencies.
+  - **Rust**: Generates struct-free, dependency-light code (only `serde_json`).
+  - **WebAssembly**: Combine Rust output with `wasm-pack` for native-speed browser validation.
+- **Standard Compliant**: Verified against the [official JSON Type Definition compliance suite](https://github.com/jsontypedef/json-typedef-spec) (316 tests).
+- **Safe & Secure**: Generated code uses finite recursion depth and explicit checks.
 
-The code generator implements
-[JTD_CODEGEN_SPEC.md](./JTD_CODEGEN_SPEC.md), a language-independent
-specification for compiling JTD schemas into target-language source code.
+## 📦 Installation
 
-This repository includes a corrected copy of the spec.  The upstream
-version had incorrect schema paths in the Section 6.1 table, Section 5.2
-code examples, and the Section 8 worked example.  The corrections were
-validated against the authoritative
-[`json-typedef-spec/tests/validation.json`](https://github.com/jsontypedef/json-typedef-spec)
-test suite (316 test cases, all passing for both emitters).
+### Pre-built Binaries
+Download the latest release for macOS, Linux, or Windows from [GitHub Releases](https://github.com/simbo1905/jtd-wasm/releases).
 
-## Quick start
-
-### Interactive demo
-
-Try the live validator playground:
-
+### From Source
 ```bash
-xmake run demo
+cargo install --git https://github.com/simbo1905/jtd-wasm jtd-codegen
 ```
 
-Then open http://localhost:8080/ in your browser.
+## 🛠️ Usage
 
-The demo includes:
-- Two example schemas (simple user, complex event with discriminators)
-- Real-time validation with detailed error reporting
-- Test case quick-load buttons
-- Live schema display
-
-See [examples/README.md](./examples/README.md) for details.
-
-**Available xmake targets:**
+### CLI
+Generate a validator from a schema file:
 
 ```bash
-xmake show -l targets              # List all targets
+# Generate JavaScript
+jtd-codegen --target js schema.json > validator.js
 
-# Compatibility tests
-xmake run fetch_suite              # Download official test suite
-xmake run test_rust                # Run Rust validator tests (316 cases)
-xmake run test_js                  # Run JS validator tests (316 cases)
-xmake run test_wasm                # Run WASM validator tests (316 cases)
-xmake run test_all                 # Run all tests
-
-# Demo system
-xmake run demo_build               # Build jtd-codegen release binary
-xmake run demo_init                # Generate nginx.conf from template
-xmake run demo_compile             # Compile example validators
-xmake run demo_start               # Start nginx server
-xmake run demo                     # Run all demo steps
+# Generate Rust
+jtd-codegen --target rust schema.json > validator.rs
 ```
 
-### Development
+### Supported Workflows
 
-Ensure all checks (fmt, clippy, tests) pass before committing:
+| Scenario | Workflow | Use Case |
+|----------|----------|----------|
+| **Rust → Rust** | Schema → `.rs` | Rust backend services needing high-performance validation. |
+| **Rust → WASM** | Schema → `.rs` → `.wasm` | Browser apps needing native speed & type safety. |
+| **Rust → JavaScript** | Schema → `.mjs` | Node.js/Browser apps where a standalone, readable JS module is preferred. |
+
+### Code Examples
+
+**JavaScript (ES Modules)**
+```javascript
+import { validate } from './validator.js';
+
+const data = JSON.parse('{"name": "Alice", "age": 30}');
+const errors = validate(data);
+
+if (errors.length > 0) {
+  console.error('Validation failed:', errors);
+}
+```
+
+**Rust**
+```rust
+use serde_json::Value;
+// Include the generated code
+include!("validator.rs");
+
+fn main() {
+    let data: Value = serde_json::from_str(r#"{"name": "Alice"}"#).unwrap();
+    let errors = validate(&data);
+    
+    if !errors.is_empty() {
+        println!("Validation failed: {:?}", errors);
+    }
+}
+```
+
+## 🧪 Development & Testing
+
+This project uses `xmake` to orchestrate tests and cross-language verification.
 
 ```bash
-# Verify everything (format, lint, unit tests, integration tests)
+# Run full verification (Format + Clippy + Rust/JS/WASM Tests)
 xmake run test_all
 
 # Run code quality checks only
 xmake run check
 
-# Install git pre-commit hook to enforce quality automatically
+# Install git pre-commit hook
 xmake run install_hooks
 ```
 
-### Generate a JavaScript validator
+## 📄 Specification
 
-```rust
-use jtd_codegen::{compiler, emit_js};
+The code generator implements [JTD_CODEGEN_SPEC.md](./JTD_CODEGEN_SPEC.md). This repository includes a corrected copy of the upstream spec, validated against the official test suite.
 
-let schema = serde_json::from_str(r#"{
-  "properties": {
-    "name": { "type": "string" },
-    "age":  { "type": "uint8" }
-  }
-}"#).unwrap();
+## ⚖️ License
 
-let compiled = compiler::compile(&schema).unwrap();
-let js_code = emit_js::emit(&compiled);
-// js_code is a standalone ES module with `export function validate(instance)`
-```
-
-### Generate a Rust validator
-
-```rust
-use jtd_codegen::{compiler, emit_rs};
-
-let schema = serde_json::from_str(r#"{
-  "properties": {
-    "name": { "type": "string" },
-    "age":  { "type": "uint8" }
-  }
-}"#).unwrap();
-
-let compiled = compiler::compile(&schema).unwrap();
-let rs_code = emit_rs::emit(&compiled);
-// rs_code is a standalone Rust module with `pub fn validate(instance: &Value) -> Vec<(String, String)>`
-```
-
-### Compile to WASM
-
-The Rust emitter output is a `.rs` file that depends only on `serde_json`.
-To turn it into a WASM module for the browser:
-
-1. Generate the Rust source with `emit_rs::emit()`
-2. Place it in a WASM crate that adds `wasm-bindgen` bindings
-3. Build with `wasm-pack build --target web`
-
-The `jtd-wasm-validator/` directory is an example of this pattern.
-
-## Test results
-
-Both emitters pass the complete official JTD validation test suite
-(`json-typedef-spec/tests/validation.json`, 316 test cases).
-
-This repo does not vendor the upstream suite. Use xmake to fetch a pinned
-revision of `json-typedef-spec` into `.tmp/` and run compatibility tests.
-
-```
-xmake run fetch_suite
-xmake run test_all
-```
-
-`test_wasm` builds the generated Rust validators to `wasm32-wasip1` and runs
-them under `wasmtime`. If you run it directly, you may need:
-
-```
-rustup target add wasm32-wasip1
-```
-
-- **76 unit tests** covering AST, compiler, and individual emitter components
-- **316 JS integration tests** (emit JS → run via embedded QuickJS → compare errors)
-- **316 Rust integration tests** (emit Rust → compile temp crate → run → compare errors)
-
-## Requirements
-
-- Rust 1.70+
-- [xmake](https://xmake.io/) (compatibility suite orchestration)
-- `curl` (fetch upstream test suite)
-- `wasmtime` (WASM runtime for compatibility tests)
-- `wasm-pack` (for WASM compilation)
-
-## Compatibility suite
-
-Fetch the pinned upstream suite into `.tmp/` and run the compatibility tests:
-
-```
-xmake run fetch_suite
-xmake run test_all
-```
-
-WASM tests compile a generated validator to WASI and run it with `wasmtime`.
-If you run WASM tests directly, you may need:
-
-```
-rustup target add wasm32-wasip1
-```
+MIT / Apache-2.0
