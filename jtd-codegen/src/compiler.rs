@@ -158,8 +158,8 @@ fn compile_type(obj: &serde_json::Map<String, Value>) -> Result<Node, CompileErr
         .get("type")
         .and_then(|v| v.as_str())
         .ok_or(CompileError::TypeNotString)?;
-    let type_kw = TypeKeyword::from_str(type_str)
-        .ok_or_else(|| CompileError::UnknownType(type_str.into()))?;
+    let type_kw =
+        TypeKeyword::parse(type_str).ok_or_else(|| CompileError::UnknownType(type_str.into()))?;
     Ok(Node::Type { type_kw })
 }
 

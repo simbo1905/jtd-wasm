@@ -11,6 +11,35 @@ local VALIDATION_SHA256 = "ca2ee582044051a690e0a5b79e81f26f4a51623d8a5b73f7a1d48
 
 local INVALID_SCHEMAS_SHA256 = "96ac0ab36d73389f2bca1f64896213cf4d30bfc88be8de7b6f1a633cc07be26d"
 
+target("check")
+    set_kind("phony")
+    on_run(function ()
+        cprint("${cyan}Formatting:${clear} cargo fmt --all -- --check")
+        os.vrunv("cargo", {"fmt", "--all", "--", "--check"})
+        
+        cprint("${cyan}Linting:${clear} cargo clippy --workspace -- -D warnings")
+        os.vrunv("cargo", {"clippy", "--workspace", "--", "-D", "warnings"})
+        
+        cprint("${green}OK:${clear} Code quality checks passed")
+    end)
+target_end()
+
+target("install_hooks")
+    set_kind("phony")
+    on_run(function ()
+        local hook_src = path.join(os.projectdir(), "scripts", "pre-commit")
+        local hook_dst = path.join(os.projectdir(), ".git", "hooks", "pre-commit")
+        
+        os.cp(hook_src, hook_dst)
+        
+        if os.host() ~= "windows" then
+            os.execv("chmod", {"+x", hook_dst})
+        end
+        
+        cprint("${green}Installed pre-commit hook to .git/hooks/pre-commit${clear}")
+    end)
+target_end()
+
 target("fetch_suite")
     set_kind("phony")
     on_run(function ()
@@ -94,6 +123,8 @@ target_end()
 target("test_all")
     set_kind("phony")
     on_run(function ()
+        cprint("${cyan}Running:${clear} check (fmt + clippy)")
+        os.vrunv("xmake", {"run", "check"})
         cprint("${cyan}Running:${clear} fetch_suite")
         os.vrunv("xmake", {"run", "fetch_suite"})
         local validation = path.join(os.projectdir(), ".tmp", "json-typedef-spec", JSON_TYPEDEF_SPEC_COMMIT, "tests", "validation.json")
@@ -116,7 +147,7 @@ target("demo_build")
         -- Build the release binary
         cprint("${cyan}Building:${clear} cargo build --release")
         os.vrunv("cargo", {"build", "--release"})
-        
+
         local binary = path.join(os.projectdir(), "target", "release", "jtd-codegen")
         if not os.isfile(binary) then
             raise("Failed to build jtd-codegen binary at " .. binary)
@@ -312,6 +343,9 @@ target_end()
 target("demo")
     set_kind("phony")
     on_run(function ()
+        cprint("${cyan}Running:${clear} check (fmt + clippy)")
+        os.vrunv("xmake", {"run", "check"})
+        
         cprint("${cyan}Running:${clear} demo_build")
         os.vrunv("xmake", {"run", "demo_build"})
         

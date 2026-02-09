@@ -9,6 +9,8 @@ use super::types::type_condition;
 use super::writer::{escape_js, CodeWriter};
 use crate::ast::TypeKeyword;
 
+type FieldEmitter = (&'static str, &'static dyn Fn(&mut CodeWriter, &EmitContext));
+
 // ── Empty ──────────────────────────────────────────────────────────────
 
 /// Empty form: no code emitted. Accepts any value.
@@ -145,7 +147,6 @@ pub fn emit_values(
 // These closure-based emitters are used by per-node unit tests.
 // The composition layer (emit.rs) uses its own _node variants that recurse directly.
 #[allow(dead_code)]
-
 /// Properties form: object guard, required checks, optional checks,
 /// additional-property rejection.
 ///
@@ -155,8 +156,8 @@ pub fn emit_values(
 pub fn emit_properties(
     w: &mut CodeWriter,
     ctx: &EmitContext,
-    required: &[(&str, &dyn Fn(&mut CodeWriter, &EmitContext))],
-    optional: &[(&str, &dyn Fn(&mut CodeWriter, &EmitContext))],
+    required: &[FieldEmitter],
+    optional: &[FieldEmitter],
     additional: bool,
     discrim_tag: Option<&str>,
 ) {
@@ -249,7 +250,7 @@ pub fn emit_discriminator(
     w: &mut CodeWriter,
     ctx: &EmitContext,
     tag: &str,
-    variants: &[(&str, &dyn Fn(&mut CodeWriter, &EmitContext))],
+    variants: &[FieldEmitter],
 ) {
     let escaped_tag = escape_js(tag);
 

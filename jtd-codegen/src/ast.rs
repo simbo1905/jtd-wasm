@@ -20,7 +20,7 @@ pub enum TypeKeyword {
 }
 
 impl TypeKeyword {
-    pub fn from_str(s: &str) -> Option<TypeKeyword> {
+    pub fn parse(s: &str) -> Option<TypeKeyword> {
         match s {
             "boolean" => Some(TypeKeyword::Boolean),
             "string" => Some(TypeKeyword::String),

@@ -23,9 +23,6 @@ flowchart TD
     B --> |emit_rs| D["Rust source file"]
     D --> E["cargo / wasm-pack"]
     E --> F[".wasm binary"]
-    
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style F fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
 There is no interpreter anywhere in this pipeline.  The generated code
@@ -108,6 +105,21 @@ xmake run demo_init                # Generate nginx.conf from template
 xmake run demo_compile             # Compile example validators
 xmake run demo_start               # Start nginx server
 xmake run demo                     # Run all demo steps
+```
+
+### Development
+
+Ensure all checks (fmt, clippy, tests) pass before committing:
+
+```bash
+# Verify everything (format, lint, unit tests, integration tests)
+xmake run test_all
+
+# Run code quality checks only
+xmake run check
+
+# Install git pre-commit hook to enforce quality automatically
+xmake run install_hooks
 ```
 
 ### Generate a JavaScript validator

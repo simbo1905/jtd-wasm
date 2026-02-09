@@ -3,9 +3,7 @@
 /// Tracks the JS expressions for the current value, error list,
 /// instance path, and schema path. Each descent into a child node
 /// produces a new context via pure methods -- no mutation.
-
-/// Context passed to each per-node emit function.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct EmitContext {
     /// JS expression for the value being validated (e.g. "v", "v[\"name\"]")
     pub val: String,

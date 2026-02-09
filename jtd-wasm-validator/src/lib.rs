@@ -1,6 +1,8 @@
 use wasm_bindgen::prelude::*;
 
 /// Generated validator -- compiled from schema.json at build time.
+#[allow(clippy::all)]
+#[allow(unused_imports)]
 mod generated {
     include!(concat!(env!("OUT_DIR"), "/validator.rs"));
 }
