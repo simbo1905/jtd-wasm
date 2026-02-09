@@ -221,56 +221,56 @@ jobs:
             
             # Write python script to generate body
             cat > gen_notes.py <<'PY_SCRIPT'
-import os
+            import os
 
-version = os.environ["VERSION"]
-changes = os.environ["CHANGES"]
-repo = os.environ["REPO"]
-tag = os.environ["TAG"]
-bin_name = os.environ["BIN_NAME"]
+            version = os.environ["VERSION"]
+            changes = os.environ["CHANGES"]
+            repo = os.environ["REPO"]
+            tag = os.environ["TAG"]
+            bin_name = os.environ["BIN_NAME"]
 
-body = f"""## Release {version}
+            body = f"""## Release {version}
 
-### Changes
-```
-{changes}
-```
+            ### Changes
+            ```
+            {changes}
+            ```
 
-### Binaries
+            ### Binaries
 
-- `{bin_name}_{version}_aarch64-apple-darwin.tar.gz` - macOS (Apple Silicon)
-- `{bin_name}_{version}_x86_64-pc-windows-msvc.zip` - Windows
-- `{bin_name}_{version}_x86_64-unknown-linux-gnu.tar.gz` - Linux (Debian Trixie)
+            - `{bin_name}_{version}_aarch64-apple-darwin.tar.gz` - macOS (Apple Silicon)
+            - `{bin_name}_{version}_x86_64-pc-windows-msvc.zip` - Windows
+            - `{bin_name}_{version}_x86_64-unknown-linux-gnu.tar.gz` - Linux (Debian Trixie)
 
-### Installation
+            ### Installation
 
-With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):
-```bash
-mise use jtd-codegen@{version}
-# or
-asdf install jtd-codegen {version}
-```
+            With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):
+            ```bash
+            mise use jtd-codegen@{version}
+            # or
+            asdf install jtd-codegen {version}
+            ```
 
-### Manual Download
+            ### Manual Download
 
-```bash
-# macOS
-curl -L -o jtd-codegen.tar.gz "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_aarch64-apple-darwin.tar.gz"
-tar -xzf jtd-codegen.tar.gz
+            ```bash
+            # macOS
+            curl -L -o jtd-codegen.tar.gz "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_aarch64-apple-darwin.tar.gz"
+            tar -xzf jtd-codegen.tar.gz
 
-# Linux
-curl -L -o jtd-codegen.tar.gz "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_x86_64-unknown-linux-gnu.tar.gz"
-tar -xzf jtd-codegen.tar.gz
+            # Linux
+            curl -L -o jtd-codegen.tar.gz "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_x86_64-unknown-linux-gnu.tar.gz"
+            tar -xzf jtd-codegen.tar.gz
 
-# Windows (PowerShell)
-Invoke-WebRequest -Uri "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_x86_64-pc-windows-msvc.zip" -OutFile jtd-codegen.zip
-Expand-Archive -Path jtd-codegen.zip -DestinationPath .
-```
-"""
+            # Windows (PowerShell)
+            Invoke-WebRequest -Uri "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_x86_64-pc-windows-msvc.zip" -OutFile jtd-codegen.zip
+            Expand-Archive -Path jtd-codegen.zip -DestinationPath .
+            ```
+            """
 
-with open("release_body.md", "w") as f:
-    f.write(body)
-PY_SCRIPT
+            with open("release_body.md", "w") as f:
+                f.write(body)
+            PY_SCRIPT
 
             # Run python script
             export CHANGES
