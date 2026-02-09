@@ -179,121 +179,83 @@ jobs:
           find dist-artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
           ls -la dist
 
-      - name: Generate release notes
-        id: notes
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+          REPO: ${{ github.repository }}
+          BIN_NAME: ${{ env.BIN_NAME }}
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ needs.meta.outputs.version }}"
           
-          if [[ "${{ needs.meta.outputs.prerelease }}" == "true" ]]; then
-            cat >> "$GITHUB_OUTPUT" <<'EOF'
-          body<<RELEASE_NOTES
-          ## Nightly Build
+          # 1. Generate Release Notes File
+          NOTES_FILE="release_notes.md"
           
-          Automated nightly build.
-          
-          ### Binaries
-          
-          - `jtd-codegen_VERSION_aarch64-apple-darwin.tar.gz` - macOS (Apple Silicon)
-          - `jtd-codegen_VERSION_x86_64-pc-windows-msvc.zip` - Windows  
-          - `jtd-codegen_VERSION_x86_64-unknown-linux-gnu.tar.gz` - Linux (Debian Trixie)
-          
-          ### Installation
-          
-          With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):
-          ```bash
-          mise use jtd-codegen@VERSION
-          # or
-          asdf install jtd-codegen VERSION
-          ```
-          RELEASE_NOTES
-          EOF
-            sed -i.bak "s/VERSION/${VERSION}/g" "$GITHUB_OUTPUT" && rm "$GITHUB_OUTPUT.bak"
+          if [[ "$PRERELEASE" == "true" ]]; then
+            echo "## Nightly Build" > "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+            echo "Automated nightly build." >> "$NOTES_FILE"
           else
-            # Get commits since last release
+            echo "## Release $VERSION" > "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+            echo "### Changes" >> "$NOTES_FILE"
+            echo '```' >> "$NOTES_FILE"
+            
             LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
             if [[ -n "$LAST_TAG" ]]; then
-              CHANGES=$(git log "${LAST_TAG}..HEAD" --oneline --no-decorate 2>/dev/null || echo "No changes")
+              git log "${LAST_TAG}..HEAD" --oneline --no-decorate >> "$NOTES_FILE" || echo "No changes" >> "$NOTES_FILE"
             else
-              CHANGES=$(git log --oneline --no-decorate -20 2>/dev/null || echo "Initial release")
+              git log --oneline --no-decorate -20 >> "$NOTES_FILE" || echo "Initial release" >> "$NOTES_FILE"
             fi
             
-            # Write python script to generate body
-            cat > gen_notes.py <<'PY_SCRIPT'
-            import os
-
-            version = os.environ["VERSION"]
-            changes = os.environ["CHANGES"]
-            repo = os.environ["REPO"]
-            tag = os.environ["TAG"]
-            bin_name = os.environ["BIN_NAME"]
-
-            body = f"""## Release {version}
-
-            ### Changes
-            ```
-            {changes}
-            ```
-
-            ### Binaries
-
-            - `{bin_name}_{version}_aarch64-apple-darwin.tar.gz` - macOS (Apple Silicon)
-            - `{bin_name}_{version}_x86_64-pc-windows-msvc.zip` - Windows
-            - `{bin_name}_{version}_x86_64-unknown-linux-gnu.tar.gz` - Linux (Debian Trixie)
-
-            ### Installation
-
-            With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):
-            ```bash
-            mise use jtd-codegen@{version}
-            # or
-            asdf install jtd-codegen {version}
-            ```
-
-            ### Manual Download
-
-            ```bash
-            # macOS
-            curl -L -o jtd-codegen.tar.gz "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_aarch64-apple-darwin.tar.gz"
-            tar -xzf jtd-codegen.tar.gz
-
-            # Linux
-            curl -L -o jtd-codegen.tar.gz "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_x86_64-unknown-linux-gnu.tar.gz"
-            tar -xzf jtd-codegen.tar.gz
-
-            # Windows (PowerShell)
-            Invoke-WebRequest -Uri "https://github.com/{repo}/releases/download/{tag}/{bin_name}_{version}_x86_64-pc-windows-msvc.zip" -OutFile jtd-codegen.zip
-            Expand-Archive -Path jtd-codegen.zip -DestinationPath .
-            ```
-            """
-
-            with open("release_body.md", "w") as f:
-                f.write(body)
-            PY_SCRIPT
-
-            # Run python script
-            export CHANGES
-            export VERSION
-            export REPO="${{ github.repository }}"
-            export TAG="${{ needs.meta.outputs.tag }}"
-            export BIN_NAME="${{ env.BIN_NAME }}"
-            python3 gen_notes.py
-
-            # Output to GITHUB_OUTPUT
-            echo "body<<EOF" >> "$GITHUB_OUTPUT"
-            cat release_body.md >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo '```' >> "$NOTES_FILE"
           fi
+          
+          echo "" >> "$NOTES_FILE"
+          echo "### Binaries" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "- \`${BIN_NAME}_${VERSION}_aarch64-apple-darwin.tar.gz\` - macOS (Apple Silicon)" >> "$NOTES_FILE"
+          echo "- \`${BIN_NAME}_${VERSION}_x86_64-pc-windows-msvc.zip\` - Windows" >> "$NOTES_FILE"
+          echo "- \`${BIN_NAME}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\` - Linux (Debian Trixie)" >> "$NOTES_FILE"
+          
+          echo "" >> "$NOTES_FILE"
+          echo "### Installation" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "With [mise](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/):" >> "$NOTES_FILE"
+          echo '```bash' >> "$NOTES_FILE"
+          echo "mise use jtd-codegen@${VERSION}" >> "$NOTES_FILE"
+          echo "# or" >> "$NOTES_FILE"
+          echo "asdf install jtd-codegen ${VERSION}" >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
+          
+          echo "" >> "$NOTES_FILE"
+          echo "### Manual Download" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo '```bash' >> "$NOTES_FILE"
+          echo "# macOS" >> "$NOTES_FILE"
+          echo "curl -L -o jtd-codegen.tar.gz \"https://github.com/${REPO}/releases/download/${TAG}/${BIN_NAME}_${VERSION}_aarch64-apple-darwin.tar.gz\"" >> "$NOTES_FILE"
+          echo "tar -xzf jtd-codegen.tar.gz" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "# Linux" >> "$NOTES_FILE"
+          echo "curl -L -o jtd-codegen.tar.gz \"https://github.com/${REPO}/releases/download/${TAG}/${BIN_NAME}_${VERSION}_x86_64-unknown-linux-gnu.tar.gz\"" >> "$NOTES_FILE"
+          echo "tar -xzf jtd-codegen.tar.gz" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "# Windows (PowerShell)" >> "$NOTES_FILE"
+          echo "Invoke-WebRequest -Uri \"https://github.com/${REPO}/releases/download/${TAG}/${BIN_NAME}_${VERSION}_x86_64-pc-windows-msvc.zip\" -OutFile jtd-codegen.zip" >> "$NOTES_FILE"
+          echo "Expand-Archive -Path jtd-codegen.zip -DestinationPath ." >> "$NOTES_FILE"
+          echo '```' >> "$NOTES_FILE"
 
-      - name: Create release and upload assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.meta.outputs.tag }}
-          name: ${{ needs.meta.outputs.tag }}
-          prerelease: ${{ needs.meta.outputs.prerelease }}
-          body: ${{ steps.notes.outputs.body }}
-          generate_release_notes: false
-          files: |
-            dist/*.tar.gz
-            dist/*.zip
+          # 2. Create Release
+          FLAGS=""
+          if [[ "$PRERELEASE" == "true" ]]; then
+            FLAGS="--prerelease"
+          fi
+          
+          gh release create "$TAG" \
+            $FLAGS \
+            --title "$TAG" \
+            --notes-file "$NOTES_FILE" \
+            dist/*.tar.gz dist/*.zip
