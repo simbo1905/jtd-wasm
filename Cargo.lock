@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "jtd-codegen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "pretty_assertions",
  "quickjs-rs",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "jtd-wasm-validator"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "js-sys",
  "jtd-codegen",
