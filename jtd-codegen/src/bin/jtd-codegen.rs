@@ -26,7 +26,9 @@ fn main() {
                         "python" | "py" => "python",
                         "rust" | "rs" => "rust",
                         other => {
-                            eprintln!("Unknown target: {other}. Use 'js', 'lua', 'python', or 'rust'.");
+                            eprintln!(
+                                "Unknown target: {other}. Use 'js', 'lua', 'python', or 'rust'."
+                            );
                             std::process::exit(1);
                         }
                     };

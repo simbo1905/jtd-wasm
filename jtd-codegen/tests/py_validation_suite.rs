@@ -156,7 +156,9 @@ fn test_py_validation_suite() {
             .expect("Failed to write to stdin");
     }
 
-    let output = child.wait_with_output().expect("Failed to wait for python3");
+    let output = child
+        .wait_with_output()
+        .expect("Failed to wait for python3");
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

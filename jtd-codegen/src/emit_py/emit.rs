@@ -353,10 +353,7 @@ fn emit_discriminator(
     w.line(&ctx.push_error("/discriminator"));
 
     // Step 2: tag missing
-    w.close_open(&format!(
-        "elif \"{}\" not in {}",
-        escaped_tag, ctx.val
-    ));
+    w.close_open(&format!("elif \"{}\" not in {}", escaped_tag, ctx.val));
     w.line(&ctx.push_error("/discriminator"));
 
     // Step 3: tag not string
@@ -364,10 +361,7 @@ fn emit_discriminator(
         "elif not isinstance({}[\"{}\"], str)",
         ctx.val, escaped_tag
     ));
-    w.line(&ctx.push_error_at(
-        &format!("/{escaped_tag}"),
-        "/discriminator",
-    ));
+    w.line(&ctx.push_error_at(&format!("/{escaped_tag}"), "/discriminator"));
 
     // Step 4: dispatch per variant
     for (variant_key, variant_node) in mapping {
@@ -382,10 +376,7 @@ fn emit_discriminator(
 
     // Step 5: unknown tag value
     w.close_open("else");
-    w.line(&ctx.push_error_at(
-        &format!("/{escaped_tag}"),
-        "/mapping",
-    ));
+    w.line(&ctx.push_error_at(&format!("/{escaped_tag}"), "/mapping"));
     w.dedent();
 }
 
@@ -440,7 +431,9 @@ mod tests {
         let schema = json!({"type": "float64"});
         let compiled = compiler::compile(&schema).unwrap();
         let code = emit(&compiled);
-        assert!(code.contains("not isinstance(instance, (int, float)) or isinstance(instance, bool)"));
+        assert!(
+            code.contains("not isinstance(instance, (int, float)) or isinstance(instance, bool)")
+        );
     }
 
     #[test]

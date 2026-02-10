@@ -77,11 +77,7 @@ impl EmitContext {
             val: format!("{}[\"{}\"]", self.val, escape_py(key)),
             err: self.err.clone(),
             ip: format!("{} + \"/{}\"", self.ip, escape_py(key)),
-            sp: format!(
-                "{} + \"/optionalProperties/{}\"",
-                self.sp,
-                escape_py(key)
-            ),
+            sp: format!("{} + \"/optionalProperties/{}\"", self.sp, escape_py(key)),
             depth: self.depth,
         }
     }
