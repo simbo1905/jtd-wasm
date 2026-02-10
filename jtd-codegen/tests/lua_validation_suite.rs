@@ -70,27 +70,30 @@ fn test_lua_validation_suite() {
     eprintln!("INFO: test_lua_validation_suite");
 
     let suite = load_suite();
-    
+
     // Load dkjson source
     let dkjson_path = std::env::var("JTD_DKJSON_PATH")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(".tmp/dkjson.lua"));
-        
+
     let dkjson_src = std::fs::read_to_string(&dkjson_path).unwrap_or_else(|e| {
         panic!("Cannot read dkjson.lua at {}: {}", dkjson_path.display(), e);
     });
 
     let lua = Lua::new();
-    
+
     // Setup dkjson in package.loaded so require("dkjson") works in generated code
     // We execute the dkjson source (which returns a module table) and put it in package.loaded
-    let setup_script = format!(r#"
+    let setup_script = format!(
+        r#"
         local dkjson_mod = (function() 
             {} 
         end)()
         package.loaded["dkjson"] = dkjson_mod
-    "#, dkjson_src);
-    
+    "#,
+        dkjson_src
+    );
+
     if let Err(e) = lua.load(&setup_script).exec() {
         panic!("Failed to load dkjson: {:?}", e);
     }
@@ -118,7 +121,8 @@ fn test_lua_validation_suite() {
 
         // Prepare test script
         // We load the generated module, parse instance, validate, and return errors as JSON string
-        let run_script = format!(r#"
+        let run_script = format!(
+            r#"
             local M = (function()
                 {}
             end)()
@@ -134,10 +138,12 @@ fn test_lua_validation_suite() {
                 table.insert(out, {{err.instancePath, err.schemaPath}})
             end
             return dkjson.encode(out)
-        "#, lua_code);
+        "#,
+            lua_code
+        );
 
         let res: Result<String, _> = lua.load(&run_script).call(instance_json.clone());
-        
+
         match res {
             Ok(json_out) => {
                 let actual = parse_lua_output(&json_out);

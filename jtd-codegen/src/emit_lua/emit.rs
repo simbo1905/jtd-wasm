@@ -12,6 +12,11 @@ pub fn emit(schema: &CompiledSchema) -> String {
     w.line("-- Do not edit manually.");
     w.line("");
     w.line("local M = {}");
+    w.line("-- Generated validators require dkjson for null sentinel handling.");
+    w.line("-- Lua 5.1 cannot distinguish JSON null from table absence; dkjson.null");
+    w.line("-- provides a reliable sentinel that preserves JTD validation semantics.");
+    w.line("-- Future enhancement: Add --lua-null-sentinel <name> CLI flag to make");
+    w.line("-- this configurable for users who prefer other JSON libraries.");
     w.line("local dkjson = require(\"dkjson\")");
     w.line("");
 
@@ -112,21 +117,33 @@ fn emit_timestamp_helper(w: &mut CodeWriter) {
     // 4 digits - 2 digits - 2 digits T 2 digits : 2 digits : 2 digits
     w.line("local y, m, d, t, h, min, s2, rest = s:match(\"^([0-9][0-9][0-9][0-9])%-([0-9][0-9])%-([0-9][0-9])([Tt])([0-9][0-9]):([0-9][0-9]):([0-9][0-9])(.*)$\")");
     w.line("if not y then return false end");
+    w.line("-- Validate component ranges");
+    w.line("local mn, dn, hn, minn, sn = tonumber(m), tonumber(d), tonumber(h), tonumber(min), tonumber(s2)");
+    w.line("if mn < 1 or mn > 12 then return false end");
+    w.line("if dn < 1 or dn > 31 then return false end");
+    w.line("if hn > 23 then return false end");
+    w.line("if minn > 59 then return false end");
+    w.line("if sn > 60 then return false end"); // RFC 3339 allows 60 for leap seconds
     w.line("-- Optional fraction");
     w.line("local off = rest");
     w.open("if rest:sub(1, 1) == \".\" then");
-    w.line("local frac_end = rest:find(\"[^0-9.]\")");
-    w.open("if not frac_end then"); 
-    w.line("-- Just fraction, no offset?"); 
-    w.line("return false"); 
+    w.line("local frac_end = rest:find(\"[^0-9]\", 2)");
+    w.open("if not frac_end then");
+    w.line("-- Just fraction, no offset?");
+    w.line("return false");
     w.close("else");
     w.line("off = rest:sub(frac_end)");
     w.close("end");
     w.close("end");
-    
+
     w.line("-- Offset: Z or z or +/-hh:mm");
     w.line("if off == \"Z\" or off == \"z\" then return true end");
-    w.line("if off:match(\"^[+-][0-9][0-9]:[0-9][0-9]$\") then return true end");
+    w.line("local oh, om = off:match(\"^[+-]([0-9][0-9]):([0-9][0-9])$\")");
+    w.open("if oh then");
+    w.line("local ohn, omn = tonumber(oh), tonumber(om)");
+    w.line("if ohn > 23 or omn > 59 then return false end");
+    w.line("return true");
+    w.close("end");
     w.line("return false");
     w.close("end");
     w.line("");
@@ -150,7 +167,10 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
 
         Node::Ref { name } => {
             let fn_name = def_fn_name(name);
-            w.line(&format!("{}({}, {}, {}, \"/definitions/{}\")", fn_name, ctx.val, ctx.err, ctx.ip, name));
+            w.line(&format!(
+                "{}({}, {}, {}, \"/definitions/{}\")",
+                fn_name, ctx.val, ctx.err, ctx.ip, name
+            ));
         }
 
         Node::Nullable { inner } => {
@@ -158,7 +178,10 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
                 return;
             }
             // Check for dkjson.null AND nil (just in case)
-            w.open(&format!("if {} ~= nil and {} ~= dkjson.null then", ctx.val, ctx.val));
+            w.open(&format!(
+                "if {} ~= nil and {} ~= dkjson.null then",
+                ctx.val, ctx.val
+            ));
             emit_node(w, inner, ctx, None);
             w.close("end");
         }
@@ -194,21 +217,29 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
             w.close("end");
         }
 
-        Node::Properties { required, optional, additional } => {
+        Node::Properties {
+            required,
+            optional,
+            additional,
+        } => {
             let guard_suffix = if !required.is_empty() {
                 "/properties"
             } else {
                 "/optionalProperties"
             };
-            
-            // Lua table check. Also ensure it's not an array? 
+
+            // Lua table check. Also ensure it's not an array?
             // Strict JTD properties requires an object. In Lua, everything is a table.
             // dkjson decodes [] as empty table and {} as empty table.
             // We'll just check type == table.
             w.open(&format!("if is_object({}) then", ctx.val));
 
             for (key, node) in required {
-                w.open(&format!("if {}[\"{}\"] == nil then", ctx.val, escape_lua(key)));
+                w.open(&format!(
+                    "if {}[\"{}\"] == nil then",
+                    ctx.val,
+                    escape_lua(key)
+                ));
                 w.line(&ctx.push_error(&format!("/properties/{}", escape_lua(key))));
                 w.close_open("else");
                 let child_ctx = ctx.required_prop(key);
@@ -217,7 +248,13 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
             }
 
             for (key, node) in optional {
-                w.open(&format!("if {}[\"{}\"] ~= nil and {}[\"{}\"] ~= dkjson.null then", ctx.val, escape_lua(key), ctx.val, escape_lua(key)));
+                w.open(&format!(
+                    "if {}[\"{}\"] ~= nil and {}[\"{}\"] ~= dkjson.null then",
+                    ctx.val,
+                    escape_lua(key),
+                    ctx.val,
+                    escape_lua(key)
+                ));
                 let child_ctx = ctx.optional_prop(key);
                 emit_node(w, node, &child_ctx, None);
                 w.close("end");
@@ -226,7 +263,7 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
             if !*additional {
                 let k = ctx.key_var();
                 w.open(&format!("for {} in pairs({}) do", k, ctx.val));
-                
+
                 let mut known: Vec<String> = Vec::new();
                 if let Some(tag) = discrim_tag {
                     known.push(tag.to_string());
@@ -241,7 +278,8 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
                 if known.is_empty() {
                     w.line(&ctx.push_error_dynamic(&format!("\"/\" .. {}", k), ""));
                 } else {
-                    let conds: Vec<String> = known.iter()
+                    let conds: Vec<String> = known
+                        .iter()
                         .map(|key| format!("{} ~= \"{}\"", k, escape_lua(key)))
                         .collect();
                     w.open(&format!("if {} then", conds.join(" and ")));
@@ -258,17 +296,34 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
 
         Node::Discriminator { tag, mapping } => {
             w.open(&format!("if is_object({}) then", ctx.val));
-            w.open(&format!("if {}[\"{}\"] ~= nil then", ctx.val, escape_lua(tag)));
-            w.open(&format!("if type({}) == \"string\" then", ctx.required_prop(tag).val)); // Access prop via ctx helper or manual
-            
+            w.open(&format!(
+                "if {}[\"{}\"] ~= nil then",
+                ctx.val,
+                escape_lua(tag)
+            ));
+            w.open(&format!(
+                "if type({}) == \"string\" then",
+                ctx.required_prop(tag).val
+            )); // Access prop via ctx helper or manual
+
             // In Lua we can't switch/match. Use if/elseif.
             let mut first = true;
             for (variant_key, variant_node) in mapping {
                 if first {
-                    w.open(&format!("if {}[\"{}\"] == \"{}\" then", ctx.val, escape_lua(tag), escape_lua(variant_key)));
+                    w.open(&format!(
+                        "if {}[\"{}\"] == \"{}\" then",
+                        ctx.val,
+                        escape_lua(tag),
+                        escape_lua(variant_key)
+                    ));
                     first = false;
                 } else {
-                    w.close_open(&format!("elseif {}[\"{}\"] == \"{}\" then", ctx.val, escape_lua(tag), escape_lua(variant_key)));
+                    w.close_open(&format!(
+                        "elseif {}[\"{}\"] == \"{}\" then",
+                        ctx.val,
+                        escape_lua(tag),
+                        escape_lua(variant_key)
+                    ));
                 }
                 let variant_ctx = ctx.discrim_variant(variant_key);
                 emit_node(w, variant_node, &variant_ctx, Some(tag));
@@ -279,11 +334,11 @@ fn emit_node(w: &mut CodeWriter, node: &Node, ctx: &EmitContext, discrim_tag: Op
                 w.line(&ctx.push_error_at(&format!("/{}", escape_lua(tag)), "/mapping"));
                 w.close("end");
             } else {
-                 // Empty mapping? JTD spec says mapping can't be empty technically but handle it.
+                // Empty mapping? JTD spec says mapping can't be empty technically but handle it.
             }
 
             w.close_open("else");
-             // Tag not string
+            // Tag not string
             w.line(&ctx.push_error_at(&format!("/{}", escape_lua(tag)), "/discriminator"));
             w.close("end");
 
@@ -318,38 +373,56 @@ fn emit_type(w: &mut CodeWriter, ctx: &EmitContext, type_kw: TypeKeyword) {
             w.close("end");
         }
         TypeKeyword::Float32 | TypeKeyword::Float64 => {
-             w.open(&format!("if type({}) ~= \"number\" then", ctx.val));
-             w.line(&ctx.push_error("/type"));
-             w.close("end");
+            w.open(&format!("if type({}) ~= \"number\" then", ctx.val));
+            w.line(&ctx.push_error("/type"));
+            w.close("end");
         }
         TypeKeyword::Int8 => {
-            w.open(&format!("if not is_integer({}) or {} < -128 or {} > 127 then", ctx.val, ctx.val, ctx.val));
+            w.open(&format!(
+                "if not is_integer({}) or {} < -128 or {} > 127 then",
+                ctx.val, ctx.val, ctx.val
+            ));
             w.line(&ctx.push_error("/type"));
             w.close("end");
         }
         TypeKeyword::Uint8 => {
-            w.open(&format!("if not is_integer({}) or {} < 0 or {} > 255 then", ctx.val, ctx.val, ctx.val));
+            w.open(&format!(
+                "if not is_integer({}) or {} < 0 or {} > 255 then",
+                ctx.val, ctx.val, ctx.val
+            ));
             w.line(&ctx.push_error("/type"));
             w.close("end");
         }
         TypeKeyword::Int16 => {
-            w.open(&format!("if not is_integer({}) or {} < -32768 or {} > 32767 then", ctx.val, ctx.val, ctx.val));
+            w.open(&format!(
+                "if not is_integer({}) or {} < -32768 or {} > 32767 then",
+                ctx.val, ctx.val, ctx.val
+            ));
             w.line(&ctx.push_error("/type"));
             w.close("end");
         }
         TypeKeyword::Uint16 => {
-            w.open(&format!("if not is_integer({}) or {} < 0 or {} > 65535 then", ctx.val, ctx.val, ctx.val));
+            w.open(&format!(
+                "if not is_integer({}) or {} < 0 or {} > 65535 then",
+                ctx.val, ctx.val, ctx.val
+            ));
             w.line(&ctx.push_error("/type"));
             w.close("end");
         }
         TypeKeyword::Int32 => {
-            w.open(&format!("if not is_integer({}) or {} < -2147483648 or {} > 2147483647 then", ctx.val, ctx.val, ctx.val));
+            w.open(&format!(
+                "if not is_integer({}) or {} < -2147483648 or {} > 2147483647 then",
+                ctx.val, ctx.val, ctx.val
+            ));
             w.line(&ctx.push_error("/type"));
             w.close("end");
         }
         TypeKeyword::Uint32 => {
             // Note: Lua numbers are doubles (53-bit mantissa). uint32 fits safely.
-            w.open(&format!("if not is_integer({}) or {} < 0 or {} > 4294967295 then", ctx.val, ctx.val, ctx.val));
+            w.open(&format!(
+                "if not is_integer({}) or {} < 0 or {} > 4294967295 then",
+                ctx.val, ctx.val, ctx.val
+            ));
             w.line(&ctx.push_error("/type"));
             w.close("end");
         }

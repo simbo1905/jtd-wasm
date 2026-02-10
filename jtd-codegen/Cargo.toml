@@ -3,6 +3,12 @@ name = "jtd-codegen"
 version = "0.2.0"
 edition = "2021"
 description = "JTD (RFC 8927) schema compiler and code generator for JavaScript ESM and Rust"
+license = "MIT"
+repository = "https://github.com/simbo1905/jtd-wasm"
+homepage = "https://github.com/simbo1905/jtd-wasm"
+documentation = "https://docs.rs/jtd-codegen"
+keywords = ["jtd", "json", "schema", "codegen", "validator"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

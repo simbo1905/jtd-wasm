@@ -52,11 +52,6 @@ impl CodeWriter {
         self.depth += 1;
     }
 
-    /// Current indentation depth.
-    pub fn depth(&self) -> usize {
-        self.depth
-    }
-
     /// Consume and return the built string.
     pub fn finish(self) -> String {
         self.buf
@@ -79,7 +74,17 @@ pub fn escape_lua(s: &str) -> String {
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
-            _ => out.push(c),
+            _ => {
+                // Escape control characters (ASCII < 32, except \t, \n, \r already handled)
+                let code = c as u32;
+                if code < 32 {
+                    // Lua decimal escape: always 3 digits to avoid ambiguity
+                    // e.g. \0 followed by '1' would be parsed as \01 (byte 1)
+                    out.push_str(&format!("\\{:03}", code));
+                } else {
+                    out.push(c);
+                }
+            }
         }
     }
     out
