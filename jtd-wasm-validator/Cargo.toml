@@ -1,6 +1,6 @@
 [package]
 name = "jtd-wasm-validator"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Example: JTD schema compiled to Rust, built as WASM for browser JSON validation"
 

@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "jtd-codegen"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "mlua",
  "pretty_assertions",
@@ -232,7 +232,7 @@ dependencies = [
 
 [[package]]
 name = "jtd-wasm-validator"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "js-sys",
  "jtd-codegen",
