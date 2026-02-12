@@ -1,10 +1,11 @@
-/// CLI: reads a JTD schema from stdin or a file, emits JS or Rust to stdout.
+/// CLI: reads a JTD schema from stdin or a file, emits code to stdout.
 ///
 /// Usage:
-///   jtd-codegen --target js   < schema.json > validator.mjs
-///   jtd-codegen --target lua  < schema.json > validator.lua
-///   jtd-codegen --target rust < schema.json > validator.rs
-///   jtd-codegen --target rust schema.json   > validator.rs
+///   jtd-codegen --target js     < schema.json > validator.mjs
+///   jtd-codegen --target lua    < schema.json > validator.lua
+///   jtd-codegen --target python < schema.json > validator.py
+///   jtd-codegen --target rust   < schema.json > validator.rs
+///   jtd-codegen --target rust   schema.json   > validator.rs
 use std::io::Read;
 
 fn main() {
@@ -22,16 +23,19 @@ fn main() {
                     target = match args[i].as_str() {
                         "js" | "javascript" => "js",
                         "lua" => "lua",
+                        "python" | "py" => "python",
                         "rust" | "rs" => "rust",
                         other => {
-                            eprintln!("Unknown target: {other}. Use 'js', 'lua', or 'rust'.");
+                            eprintln!(
+                                "Unknown target: {other}. Use 'js', 'lua', 'python', or 'rust'."
+                            );
                             std::process::exit(1);
                         }
                     };
                 }
             }
             "--help" | "-h" => {
-                eprintln!("Usage: jtd-codegen [--target js|lua|rust] [schema.json]");
+                eprintln!("Usage: jtd-codegen [--target js|lua|python|rust] [schema.json]");
                 eprintln!("  Reads JTD schema from file or stdin, emits code to stdout.");
                 std::process::exit(0);
             }
@@ -72,6 +76,7 @@ fn main() {
     let code = match target {
         "js" => jtd_codegen::emit_js::emit(&compiled),
         "lua" => jtd_codegen::emit_lua::emit(&compiled),
+        "python" => jtd_codegen::emit_py::emit(&compiled),
         "rust" => jtd_codegen::emit_rs::emit(&compiled),
         _ => unreachable!(),
     };
