@@ -6,7 +6,7 @@
 
 **Ahead-of-time code generator for [RFC 8927 JSON Type Definition](https://www.rfc-editor.org/rfc/rfc8927).**
 
-Compiles JTD schemas into optimized validation functions for Rust and JavaScript. No interpreter, no AST at runtime, zero overhead.
+Compiles JTD schemas into optimized validation functions for Rust, JavaScript, Python, and Lua. No interpreter, no AST at runtime, zero overhead.
 
 ## 🚀 Interactive Demo
 
@@ -29,6 +29,7 @@ flowchart TD
 - **Multi-Target**:
   - **JavaScript**: Generates standalone ESM `.mjs` files. No dependencies.
   - **Lua**: Generates portable Lua 5.1 / LuaJIT code.
+  - **Python**: Generates Python 3.13+ modules using only the standard library.
   - **Rust**: Generates struct-free, dependency-light code (only `serde_json`).
   - **WebAssembly**: Combine Rust output with `wasm-pack` for native-speed browser validation.
 - **Standard Compliant**: Verified against the [official JSON Type Definition compliance suite](https://github.com/jsontypedef/json-typedef-spec) (316 tests).
@@ -56,6 +57,9 @@ jtd-codegen --target js schema.json > validator.js
 # Generate Lua
 jtd-codegen --target lua schema.json > validator.lua
 
+# Generate Python
+jtd-codegen --target python schema.json > validator.py
+
 # Generate Rust
 jtd-codegen --target rust schema.json > validator.rs
 ```
@@ -68,6 +72,7 @@ jtd-codegen --target rust schema.json > validator.rs
 | **Rust → WASM** | Schema → `.rs` → `.wasm` | Browser apps needing native speed & type safety. |
 | **Rust → JavaScript** | Schema → `.mjs` | Node.js/Browser apps where a standalone, readable JS module is preferred. |
 | **Rust → Lua** | Schema → `.lua` | Embedded systems (Nginx, Redis, Games) using Lua 5.1 or LuaJIT. |
+| **Rust → Python** | Schema → `.py` | Python services and scripts needing JTD validation with zero dependencies. |
 
 ### Code Examples
 
@@ -112,6 +117,19 @@ if #errors > 0 then
     print("Error at " .. err[1] .. ": " .. err[2])
   end
 end
+```
+
+**Python (3.13+)**
+```python
+import json
+from validator import validate
+
+data = json.loads('{"name": "Alice", "age": 30}')
+errors = validate(data)
+
+if errors:
+    for err in errors:
+        print(f"Error at {err['instancePath']}: {err['schemaPath']}")
 ```
 
 ## 🧪 Development & Testing
