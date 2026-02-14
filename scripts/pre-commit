@@ -14,7 +14,7 @@ fi
 # 2. Clippy (Linting)
 echo "  Running clippy..."
 if ! cargo clippy --workspace -- -D warnings; then
-    echo "Error: Clippy check failed. Fix warnings above."
+    echo "Error: Clippy check failed. Fix warnings above." >&2
     exit 1
 fi
 
