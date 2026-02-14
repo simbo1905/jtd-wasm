@@ -6,17 +6,15 @@ echo "Running pre-commit checks..."
 
 # 1. Format Check
 echo "  Checking formatting..."
-cargo fmt --all -- --check
-if [ $? -ne 0 ]; then
-    echo "Error: Formatting check failed. Run 'cargo fmt --all' to fix."
+if ! cargo fmt --all -- --check; then
+    echo "Error: Formatting check failed. Run 'cargo fmt --all' to fix." >&2
     exit 1
 fi
 
 # 2. Clippy (Linting)
 echo "  Running clippy..."
-cargo clippy --workspace -- -D warnings
-if [ $? -ne 0 ]; then
-    echo "Error: Clippy check failed. Fix warnings above."
+if ! cargo clippy --workspace -- -D warnings; then
+    echo "Error: Clippy check failed. Fix warnings above." >&2
     exit 1
 fi
 
