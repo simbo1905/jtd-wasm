@@ -7,7 +7,7 @@ echo "Running pre-commit checks..."
 # 1. Format Check
 echo "  Checking formatting..."
 if ! cargo fmt --all -- --check; then
-    echo "Error: Formatting check failed. Run 'cargo fmt --all' to fix."
+    echo "Error: Formatting check failed. Run 'cargo fmt --all' to fix." >&2
     exit 1
 fi
 
