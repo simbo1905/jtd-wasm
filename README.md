@@ -154,4 +154,4 @@ The code generator implements [JTD_CODEGEN_SPEC.md](./JTD_CODEGEN_SPEC.md). This
 
 ## ⚖️ License
 
-MIT / Apache-2.0
+MIT License - see [LICENSE](LICENSE) for details.
