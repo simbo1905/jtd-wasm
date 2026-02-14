@@ -1,6 +1,7 @@
 # jtd-wasm
 
 [![CI](https://github.com/simbo1905/jtd-wasm/actions/workflows/ci.yml/badge.svg)](https://github.com/simbo1905/jtd-wasm/actions/workflows/ci.yml)
+[![CodeFactor](https://www.codefactor.io/repository/github/simbo1905/jtd-wasm/badge)](https://www.codefactor.io/repository/github/simbo1905/jtd-wasm)
 [![Release](https://img.shields.io/github/v/release/simbo1905/jtd-wasm)](https://github.com/simbo1905/jtd-wasm/releases)
 [![License](https://img.shields.io/github/license/simbo1905/jtd-wasm)](LICENSE)
 
