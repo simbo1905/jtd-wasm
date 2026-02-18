@@ -19,10 +19,11 @@ Test schemas against the generated validators (JS and WASM) directly in your bro
 flowchart TD
     A[JTD schema JSON] --> B[jtd-codegen Rust]
     B --> |--target js| C[JavaScript validator (.mjs)]
-    B --> |--target python| D[Python validator (.py)]
-    B --> |--target rust| E[Rust validator source (.rs)]
-    E --> F[cargo + wasm-pack]
-    F --> G[WASM validator binary (.wasm)]
+    B --> |--target lua| D[Lua validator (.lua)]
+    B --> |--target python| E[Python validator (.py)]
+    B --> |--target rust| F[Rust validator source (.rs)]
+    F --> G[cargo + wasm-pack]
+    G --> H[WASM validator binary (.wasm)]
 ```
 
 ## ✨ Features
