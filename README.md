@@ -17,13 +17,13 @@ Test schemas against the generated validators (JS and WASM) directly in your bro
 
 ```mermaid
 flowchart TD
-    A[JTD schema JSON] --> B[jtd-codegen Rust]
-    B --> |--target js| C[JavaScript validator (.mjs)]
-    B --> |--target lua| D[Lua validator (.lua)]
-    B --> |--target python| E[Python validator (.py)]
-    B --> |--target rust| F[Rust validator source (.rs)]
-    F --> G[cargo + wasm-pack]
-    G --> H[WASM validator binary (.wasm)]
+    A[JTD schema json] --> B[jtd codegen rust]
+    B --> C[javascript validator mjs]
+    B --> D[lua validator lua]
+    B --> E[python validator py]
+    B --> F[rust validator rs]
+    F --> G[cargo wasm pack]
+    G --> H[wasm validator binary]
 ```
 
 ## ✨ Features
