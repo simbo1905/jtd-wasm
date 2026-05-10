@@ -1,0 +1,56 @@
+name: Rebuild Release Asset
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing Git tag / release tag, e.g. release/0.3.0
+        required: true
+        type: string
+      version:
+        description: Version string used in the asset filename, e.g. 0.3.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  BIN_NAME: jtd-codegen
+
+jobs:
+  build_linux_arm64:
+    name: Build Linux ARM64 asset
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -p jtd-codegen --bin jtd-codegen --release --locked
+          mkdir -p dist
+          cp "target/release/jtd-codegen" "dist/jtd-codegen"
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="aarch64-unknown-linux-gnu"
+          out="${BIN_NAME}_${{ inputs.version }}_${target}.tar.gz"
+          tar -C dist -czf "$out" "${BIN_NAME}"
+          sha256sum "$out"
+
+      - name: Upload asset to existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset="${BIN_NAME}_${{ inputs.version }}_aarch64-unknown-linux-gnu.tar.gz"
+          gh release upload "${{ inputs.tag }}" "$asset" --clobber
