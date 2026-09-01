@@ -1,11 +1,6 @@
 ---
 name: jtd-mjs-validator
 description: Generate standalone ESM (.mjs) JTD validators with jtd-codegen from *.jdt.json schemas. Use when adding JTD validation to Node.js projects, Makefile or package.json codegen workflows, or multiple schema files that need differentiated validate exports.
-paths:
-  - "**/*.jdt.json"
-  - "**/*.mjs"
-  - "Makefile"
-  - "package.json"
 ---
 
 # JTD → MJS validator generation
