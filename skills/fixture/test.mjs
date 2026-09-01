@@ -1,4 +1,4 @@
-import { validateUser, validateEvent } from "./generated/validators.mjs";
+import { validateUser, validateEvent, validateOrderItem } from "./generated/validators.mjs";
 
 let pass = true;
 
@@ -45,6 +45,16 @@ assert(
   eventErrors.some((e) => e.instancePath === "/status"),
   "event status error should reference /status",
 );
+
+// Valid hyphenated-schema barrel export
+assert(
+  validateOrderItem({ sku: "SKU-1", quantity: 2 }).length === 0,
+  "valid order item should have no errors",
+);
+
+// Invalid hyphenated-schema barrel export
+const orderItemErrors = validateOrderItem({ sku: "SKU-1", quantity: -1 });
+assert(orderItemErrors.length > 0, "invalid order item quantity should produce errors");
 
 if (pass) {
   console.log("MJS validator fixture test PASSED");
