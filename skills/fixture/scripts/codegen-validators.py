@@ -15,6 +15,9 @@ def export_name(stem: str) -> str:
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    for generated_path in OUT_DIR.glob("*.py"):
+        generated_path.unlink()
+
     barrel_lines: list[str] = []
 
     for schema_path in sorted(SCHEMA_DIR.glob("*.jdt.json")):

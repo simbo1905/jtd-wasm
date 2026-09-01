@@ -48,6 +48,19 @@ Rules:
 
 Empty list means valid. Do **not** pass a JSON string — parse first with `json.loads`.
 
+## Common JTD patterns
+
+| Use case | JTD form |
+|----------|----------|
+| Required field | `properties` |
+| Optional field | `optionalProperties` |
+| Nullable string | `{ "type": "string", "nullable": true }` |
+| String-to-string map | `{ "values": { "type": "string" } }` |
+| Array of values | `{ "elements": { "type": "string" } }` |
+| Reusable nested schema | `definitions` plus `{ "ref": "Name" }` |
+
+`properties` fields must be present; `optionalProperties` fields may be absent. Unless the schema sets `"additionalProperties": true`, object forms reject unknown keys, so model only the keys the API contract permits. For OpenAPI 3.1, a field with `type: [string, "null"]` maps to `{ "type": "string", "nullable": true }`; an object with `additionalProperties` maps to `values`.
+
 ## Single schema workflow
 
 ### Example schema (`schemas/user.jdt.json`)
@@ -129,11 +142,11 @@ SCHEMA_DIR  := schemas
 OUT_DIR     := generated
 SCHEMAS     := $(wildcard $(SCHEMA_DIR)/*.jdt.json)
 
-.PHONY: validators clean-validators test-validators
+.PHONY: validators clean-validators test-validators FORCE
 
 validators: $(OUT_DIR)/__init__.py
 
-$(OUT_DIR)/__init__.py: $(SCHEMAS)
+$(OUT_DIR)/__init__.py: FORCE
 	@mkdir -p $(OUT_DIR)
 	@rm -f $(OUT_DIR)/*.py $(OUT_DIR)/__init__.py
 	@for schema in $(SCHEMAS); do \
@@ -146,6 +159,8 @@ $(OUT_DIR)/__init__.py: $(SCHEMAS)
 	  snake=$$(echo "$$stem" | sed 's/-/_/g'); \
 	  echo "from .$$snake import validate as validate_$$snake" >> $@; \
 	done
+
+FORCE:
 
 clean-validators:
 	rm -rf $(OUT_DIR)
@@ -199,6 +214,9 @@ def export_name(stem: str) -> str:
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    for generated_path in OUT_DIR.glob("*.py"):
+        generated_path.unlink()
+
     barrel_lines: list[str] = []
 
     for schema_path in sorted(SCHEMA_DIR.glob("*.jdt.json")):

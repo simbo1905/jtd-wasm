@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from generated import validate_event, validate_user
+from generated import validate_advanced, validate_event, validate_user
 
 pass_ = True
 
@@ -49,6 +49,34 @@ assert_(len(event_errors) > 0, "invalid event status should produce errors")
 assert_(
     any(e["instancePath"] == "/status" for e in event_errors),
     "event status error should reference /status",
+)
+
+assert_(
+    len(
+        validate_advanced(
+            {
+                "profile": {"author": {"name": "Alice", "bio": None}},
+                "errors": {"email": ["must be valid"], "name": []},
+            }
+        )
+    )
+    == 0,
+    "nullable field, values map, and nested references should validate",
+)
+
+advanced_errors = validate_advanced(
+    {
+        "profile": {"author": {"name": "Alice", "bio": 42}},
+        "errors": {"email": "must be a list"},
+    }
+)
+assert_(
+    any(e["instancePath"] == "/profile/author/bio" for e in advanced_errors),
+    "invalid nullable field should reference nested ref path",
+)
+assert_(
+    any(e["instancePath"] == "/errors/email" for e in advanced_errors),
+    "invalid values map entry should reference map key path",
 )
 
 if pass_:
