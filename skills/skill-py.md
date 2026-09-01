@@ -22,7 +22,7 @@ cargo build --release -p jtd-codegen
 # binary: target/release/jtd-codegen
 ```
 
-Requires **Python 3.13+** to run generated `.py` validators. Generated code uses only the **standard library** — no third-party dependencies.
+Requires **Python 3.9+** to run generated `.py` validators. Generated code uses only the **standard library** — no third-party dependencies.
 
 ## File naming convention
 
@@ -176,7 +176,7 @@ Run: `make validators` then `make test-validators`.
 ```toml
 [project]
 name = "my-app"
-requires-python = ">=3.13"
+requires-python = ">=3.9"
 
 [project.scripts]
 # optional: expose CLI entry points
@@ -250,7 +250,6 @@ For projects still using `setup.py`, call the same codegen script from a custom 
 from setuptools import setup
 from setuptools.command.build_py import build_py
 import subprocess
-from pathlib import Path
 
 class BuildPy(build_py):
     def run(self):
