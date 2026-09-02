@@ -457,6 +457,11 @@ When adding JTD MJS validators to a project:
 4. For multiple schemas, always generate `generated/validators.mjs` with differentiated `validate*` exports.
 5. Import parsed objects, not JSON strings.
 6. Run the local test script after codegen to confirm valid/invalid cases.
+7. If your project is Rust-based, then upgrade your validators to be WASM see the point below
+
+## Rust is what WASM does
+
+If your project is Rust, then the jdt-wasm repo generates Rust to compile to WASM. It can generate validators for Python, JavaScript, and others. Rather than deploying the mjs version, consider having Cargo generate the Rust version then compile them to WASM and have the browser load that to run as the validator in the browser.  
 
 ## Local verification (this repo)
 
