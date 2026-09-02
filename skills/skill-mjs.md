@@ -2,7 +2,7 @@
 name: jtd-mjs-validator
 description: Generate standalone ESM (.mjs) ---
 name: jtd-mjs-validator
-description: Generate standalone ESM (.mjs)  RFC 8927 JSON Type Definition "JTD" validators with jtd-codegen from *.jdt.json schemas. Use when adding JTD validation to Node.js projects, Makefile or package.json codegen workflows, or multiple schema files that need differentiated validate exports.
+description: Generate standalone ESM (.mjs)  RFC 8927 JSON Type Definition "JTD" validators with jtd-codegen from *.jdt.json schemas. Use when adding RFC 8927 JSON Type Definition "JTD" validation to browser-side SPA logic or server-side Bunx/Deno/Node.js projects, Makefile or package.json codegen workflows, or multiple schema files that need differentiated validate exports.
 ---
 
 #  RFC 8927 JSON Type Definition "JTD" → MJS validator generation
